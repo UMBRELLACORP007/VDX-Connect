@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>VDX Connect</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel-2: #1e222b;
+      --border: #2a2f3a;
+      --text: #e6e8eb;
+      --text-dim: #8b909c;
+      --accent: #4f8cff;
+      --accent-dim: #2d5fc9;
+      --green: #35c46a;
+      --red: #e5484d;
+      --amber: #d9a441;
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ---- Top bar ---- */
+    #topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      flex-shrink: 0;
+    }
+
+    #topbar h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+      letter-spacing: 0.2px;
+    }
+
+    #status-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+
+    #btn-toggle-logs {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    #btn-toggle-logs:hover { color: var(--text); border-color: var(--accent-dim); }
+
+    /* ---- Main layout ---- */
+    #main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    #content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+
+    .panel h2 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-dim);
+      margin: 0 0 12px 0;
+      font-weight: 600;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 9px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+    }
+
+    button:hover:not(:disabled) { background: #262b36; border-color: var(--accent-dim); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button.primary:hover:not(:disabled) { background: var(--accent-dim); }
+
+    button.danger { background: transparent; border-color: var(--red); color: var(--red); }
+    button.danger:hover:not(:disabled) { background: rgba(229, 72, 77, 0.12); }
+
+    /* ---- Incoming request ---- */
+    #incoming {
+      display: none;
+      border-color: var(--amber);
+    }
+    #incoming-text { margin: 0 0 12px 0; font-size: 14px; }
+
+    /* ---- Video area ---- */
+    #video-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 320px;
+    }
+
+    #video-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    #video-stage {
+      flex: 1;
+      background: #000;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      min-height: 280px;
+    }
+
+    #remote-video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+      background: #000;
+    }
+
+    #video-placeholder {
+      color: var(--text-dim);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+    }
+
+    /* ---- Logs slide-out panel ---- */
+    #logs-panel {
+      width: 0;
+      flex-shrink: 0;
+      background: var(--panel);
+      border-left: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: width 0.18s ease;
+    }
+
+    #logs-panel.open {
+      width: 420px;
+    }
+
+    #logs-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #logs-header span { font-size: 13px; font-weight: 600; color: var(--text-dim); }
+
+    #btn-close-logs, #btn-clear-logs {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 13px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    #btn-close-logs:hover, #btn-clear-logs:hover { color: var(--text); }
+
+    #log {
+      flex: 1;
+      font-family: "SF Mono", Consolas, monospace;
+      font-size: 11.5px;
+      white-space: pre-wrap;
+      background: #0a0b0e;
+      padding: 12px 16px;
+      overflow-y: auto;
+      color: #b9bec9;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="topbar">
+    <h1>VDX Connect</h1>
+    <div id="status-group">
+      <span id="status" class="badge">Connecting...</span>
+      <span id="peer-status" class="badge">Peer: unknown</span>
+      <button id="btn-toggle-logs">Logs</button>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="content">
+
+      <div id="incoming" class="panel">
+        <p id="incoming-text"></p>
+        <div class="btn-row">
+          <button id="btn-accept" class="primary">Accept</button>
+          <button id="btn-reject" class="danger">Reject</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Connection</h2>
+        <div class="btn-row">
+          <button id="btn-request">Request Connection</button>
+          <button id="btn-end" class="danger" disabled>End Session</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Screen Share</h2>
+        <div class="btn-row">
+          <button id="btn-share-screen" class="primary" disabled>Share My Screen</button>
+          <button id="btn-stop-share" class="danger" disabled style="display:none;">Stop Sharing</button>
+        </div>
+      </div>
+
+      <div class="panel" id="video-panel">
+        <div id="video-panel-header">
+          <h2 style="margin:0;">Remote Screen <span id="remote-video-label" style="color:var(--text); text-transform:none; letter-spacing:0;"></span></h2>
+        </div>
+        <div id="video-stage">
+          <video id="remote-video" autoplay playsinline></video>
+          <div id="video-placeholder">No one is sharing their screen yet.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="logs-panel">
+      <div id="logs-header">
+        <span>Logs</span>
+        <div>
+          <button id="btn-clear-logs">Clear</button>
+          <button id="btn-close-logs">Close</button>
+        </div>
+      </div>
+      <div id="log"></div>
+    </div>
+  </div>
+
+  <script src="./renderer.js"></script>
+</body>
+</html>
