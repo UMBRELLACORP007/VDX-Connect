@@ -21,6 +21,8 @@
 
     * { box-sizing: border-box; }
 
+    html, body { height: 100%; }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
@@ -30,32 +32,47 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      user-select: none;
     }
+
+    input, textarea { user-select: text; }
+
+    /* ---- Custom titlebar (frame:false in main.js — Bugs.txt) ---- */
+    #titlebar {
+      -webkit-app-region: drag;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 34px;
+      flex-shrink: 0;
+      background: #0a0b0e;
+      border-bottom: 1px solid var(--border);
+      padding: 0 0 0 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    #titlebar-controls { -webkit-app-region: no-drag; display: flex; height: 100%; }
+    #titlebar-controls button {
+      width: 44px; height: 34px; border: none; border-radius: 0; background: transparent;
+      color: var(--text-dim); font-size: 13px; padding: 0;
+    }
+    #titlebar-controls button:hover { background: var(--panel-2); color: var(--text); }
+    #btn-win-close:hover { background: var(--red); color: #fff; }
 
     /* ---- Top bar ---- */
     #topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 20px;
+      padding: 12px 20px;
       border-bottom: 1px solid var(--border);
       background: var(--panel);
       flex-shrink: 0;
     }
 
-    #topbar h1 {
-      font-size: 16px;
-      font-weight: 600;
-      margin: 0;
-      letter-spacing: 0.2px;
-    }
+    #topbar h1 { font-size: 16px; font-weight: 600; margin: 0; letter-spacing: 0.2px; }
 
-    #status-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 13px;
-    }
+    #status-group { display: flex; align-items: center; gap: 8px; font-size: 13px; flex-wrap: wrap; }
 
     .badge {
       display: inline-flex;
@@ -66,9 +83,13 @@
       background: var(--panel-2);
       border: 1px solid var(--border);
       color: var(--text-dim);
+      white-space: nowrap;
     }
+    .badge.good { color: var(--green); border-color: rgba(53,196,106,0.4); }
+    .badge.warn { color: var(--amber); border-color: rgba(217,164,65,0.4); }
+    .badge.bad { color: var(--red); border-color: rgba(229,72,77,0.4); }
 
-    #btn-toggle-logs {
+    #topbar button {
       background: var(--panel-2);
       border: 1px solid var(--border);
       color: var(--text-dim);
@@ -77,22 +98,30 @@
       font-size: 13px;
       cursor: pointer;
     }
-    #btn-toggle-logs:hover { color: var(--text); border-color: var(--accent-dim); }
+    #topbar button:hover { color: var(--text); border-color: var(--accent-dim); }
 
     /* ---- Main layout ---- */
-    #main {
-      flex: 1;
-      display: flex;
-      overflow: hidden;
-    }
+    #main { flex: 1; display: flex; overflow: hidden; }
 
     #content {
       flex: 1;
-      padding: 20px;
+      padding: 16px 20px;
       overflow-y: auto;
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
       gap: 16px;
+      align-content: start;
+      height: 100%;
+    }
+
+    #left-col { grid-column: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0; height: 100%; }
+    #right-col { grid-column: 2; display: flex; flex-direction: column; gap: 16px; min-width: 0; height: 100%; }
+
+    /* Below this, a fixed sidebar stops making sense - stack instead of squeezing it. */
+    @media (max-width: 900px) {
+      #content { grid-template-columns: 1fr; height: auto; }
+      #left-col, #right-col { grid-column: 1; height: auto; }
+      #video-panel { min-height: 280px; }
     }
 
     .panel {
@@ -109,13 +138,12 @@
       color: var(--text-dim);
       margin: 0 0 12px 0;
       font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
-    .btn-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 10px; }
 
     button {
       font-family: inherit;
@@ -139,27 +167,16 @@
     button.danger { background: transparent; border-color: var(--red); color: var(--red); }
     button.danger:hover:not(:disabled) { background: rgba(229, 72, 77, 0.12); }
 
+    button.small { padding: 5px 10px; font-size: 12px; }
+
     /* ---- Incoming request ---- */
-    #incoming {
-      display: none;
-      border-color: var(--amber);
-    }
+    #incoming { display: none; border-color: var(--amber); }
     #incoming-text { margin: 0 0 12px 0; font-size: 14px; }
 
     /* ---- Video area ---- */
-    #video-panel {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 320px;
-    }
+    #video-panel { flex: 1; display: flex; flex-direction: column; min-height: 360px; }
 
-    #video-panel-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
+    #video-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 
     #video-stage {
       flex: 1;
@@ -171,118 +188,311 @@
       justify-content: center;
       position: relative;
       overflow: hidden;
-      min-height: 280px;
+      min-height: 320px;
+      outline: none;
     }
+    #video-stage.controllable { cursor: none; }
+    #video-stage.focused { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 
-    #remote-video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: none;
-      background: #000;
-    }
+    #remote-video { width: 100%; height: 100%; object-fit: contain; display: none; background: #000; }
 
-    #video-placeholder {
+    #video-placeholder { color: var(--text-dim); font-size: 13px; text-align: center; padding: 20px; }
+
+    #control-hint {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.55);
       color: var(--text-dim);
-      font-size: 13px;
-      text-align: center;
-      padding: 20px;
+      font-size: 11px;
+      padding: 4px 9px;
+      border-radius: 6px;
+      display: none;
+      pointer-events: none;
     }
+
+    /* ---- Local self-preview (small PiP while sharing) ---- */
+    #local-preview-wrap {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      width: 160px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      background: #000;
+      display: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    #local-preview-wrap span {
+      position: absolute; top: 4px; left: 6px; font-size: 10px; color: #fff;
+      background: rgba(0,0,0,0.5); padding: 1px 6px; border-radius: 4px; z-index: 1;
+    }
+    #local-preview { width: 100%; display: block; }
+
+    /* ---- Fullscreen remote view overlay ---- */
+    #fullscreen-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 50;
+      align-items: center;
+      justify-content: center;
+    }
+    #fullscreen-overlay.open { display: flex; }
+    #fullscreen-overlay video { width: 100%; height: 100%; object-fit: contain; outline: none; }
+    #btn-exit-fullscreen {
+      position: absolute; top: 14px; right: 14px; z-index: 2;
+    }
+    #btn-toggle-floating-chat {
+      position: absolute; top: 14px; right: 190px; z-index: 2;
+    }
+
+    /* ---- Floating translucent chat (shown over fullscreen remote view) ---- */
+    #floating-chat {
+      display: none;
+      position: absolute;
+      top: 60px; right: 14px; bottom: 14px;
+      width: 300px;
+      background: rgba(20, 22, 26, 0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      z-index: 2;
+      flex-direction: column;
+      padding: 10px;
+      gap: 8px;
+    }
+    #fullscreen-overlay.chat-open #floating-chat { display: flex; }
+    #floating-chat-log {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+    }
+    #floating-chat-log .chat-msg {
+      background: rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 4px 8px;
+      max-width: 90%;
+      word-break: break-word;
+    }
+    #floating-chat-log .chat-msg.mine { align-self: flex-end; background: rgba(80,140,255,0.35); }
+    #floating-chat-input-row { display: flex; gap: 6px; flex-shrink: 0; }
+    #floating-chat-input {
+      flex: 1; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px; color: #fff; padding: 6px 8px; font-size: 13px;
+    }
+    #floating-chat-input:focus { outline: none; }
+
+    /* ---- Chat panel ---- */
+    #chat-panel { display: flex; flex-direction: column; flex: 1; min-height: 260px; }
+    #chat-log {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 4px 2px;
+      margin-bottom: 10px;
+    }
+    .chat-msg { max-width: 85%; padding: 7px 10px; border-radius: 10px; font-size: 13px; line-height: 1.35; }
+    .chat-msg.mine { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 3px; }
+    .chat-msg.theirs { align-self: flex-start; background: var(--panel-2); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
+    .chat-msg .chat-time { display: block; font-size: 10px; opacity: 0.7; margin-top: 3px; }
+    #chat-input-row { display: flex; gap: 8px; flex-shrink: 0; }
+    #chat-input {
+      flex: 1; background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 9px 12px; font-size: 13px; font-family: inherit;
+    }
+    #chat-input:focus { outline: none; border-color: var(--accent-dim); }
+
+    /* ---- File transfer panel ---- */
+    #dropzone {
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      padding: 18px 12px;
+      text-align: center;
+      font-size: 12.5px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    #dropzone.dragover { border-color: var(--accent); background: rgba(79,140,255,0.06); color: var(--text); }
+
+    #transfer-list { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
+    .transfer-item { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font-size: 12px; }
+    .transfer-item .t-top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .transfer-item .t-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .transfer-item .t-meta { color: var(--text-dim); font-size: 11px; }
+    .transfer-item .t-bar-track { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; margin-bottom: 6px; }
+    .transfer-item .t-bar-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.15s; }
+    .transfer-item.error .t-bar-fill { background: var(--red); }
+    .transfer-item.done .t-bar-fill { background: var(--green); }
+    .transfer-item .t-actions { display: flex; gap: 6px; }
 
     /* ---- Logs slide-out panel ---- */
     #logs-panel {
-      width: 0;
-      flex-shrink: 0;
-      background: var(--panel);
-      border-left: 1px solid var(--border);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      transition: width 0.18s ease;
+      width: 0; flex-shrink: 0; background: var(--panel); border-left: 1px solid var(--border);
+      overflow: hidden; display: flex; flex-direction: column; transition: width 0.18s ease;
     }
-
-    #logs-panel.open {
-      width: 420px;
-    }
-
-    #logs-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-
+    #logs-panel.open { width: 420px; }
+    #logs-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
     #logs-header span { font-size: 13px; font-weight: 600; color: var(--text-dim); }
-
-    #btn-close-logs, #btn-clear-logs {
-      background: transparent;
-      border: none;
-      color: var(--text-dim);
-      font-size: 13px;
-      padding: 4px 8px;
-      cursor: pointer;
-    }
+    #btn-close-logs, #btn-clear-logs { background: transparent; border: none; color: var(--text-dim); font-size: 13px; padding: 4px 8px; cursor: pointer; }
     #btn-close-logs:hover, #btn-clear-logs:hover { color: var(--text); }
+    #log { flex: 1; font-family: "SF Mono", Consolas, monospace; font-size: 11.5px; white-space: pre-wrap; background: #0a0b0e; padding: 12px 16px; overflow-y: auto; color: #b9bec9; }
 
-    #log {
-      flex: 1;
-      font-family: "SF Mono", Consolas, monospace;
-      font-size: 11.5px;
-      white-space: pre-wrap;
-      background: #0a0b0e;
-      padding: 12px 16px;
-      overflow-y: auto;
-      color: #b9bec9;
+    /* ---- Activity slide-out panel (same pattern as Logs) ---- */
+    #activity-panel {
+      width: 0; flex-shrink: 0; background: var(--panel); border-left: 1px solid var(--border);
+      overflow: hidden; display: flex; flex-direction: column; transition: width 0.18s ease;
     }
+    #activity-panel.open { width: 380px; }
+    #activity-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    #activity-header span { font-size: 13px; font-weight: 600; color: var(--text-dim); }
+    #btn-close-activity, #btn-refresh-activity { background: transparent; border: none; color: var(--text-dim); font-size: 13px; padding: 4px 8px; cursor: pointer; }
+    #btn-close-activity:hover, #btn-refresh-activity:hover { color: var(--text); }
+    #activity-list { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
   </style>
 </head>
 <body>
+
+  <div id="titlebar">
+    <span>VDX Connect</span>
+    <div id="titlebar-controls">
+      <button id="btn-win-minimize" title="Minimize">&#8211;</button>
+      <button id="btn-win-fullscreen" title="Toggle fullscreen">&#9974;</button>
+      <button id="btn-win-close" title="Close">&#10005;</button>
+    </div>
+  </div>
 
   <div id="topbar">
     <h1>VDX Connect</h1>
     <div id="status-group">
       <span id="status" class="badge">Connecting...</span>
       <span id="peer-status" class="badge">Peer: unknown</span>
+      <span id="latency-badge" class="badge" style="display:none;">-- ms</span>
+      <span id="fps-badge" class="badge" style="display:none;">-- fps</span>
+      <span id="quality-badge" class="badge" style="display:none;">--</span>
+      <button id="btn-toggle-activity">Activity</button>
       <button id="btn-toggle-logs">Logs</button>
+      <button id="btn-logout" class="small" title="Log out and clear saved Device ID/Secret">Logout</button>
     </div>
+  </div>
+
+  <!-- First-run login screen. Hidden by default; renderer.js shows it only
+       when there's no saved deviceId/secret yet, or a saved one gets
+       rejected. On success renderer.js persists it via main.js so this
+       never shows again on this machine unless the user logs out. -->
+  <div id="login-overlay" style="display:none; position:fixed; inset:0; background:rgba(10,10,14,0.92); z-index:999; align-items:center; justify-content:center;">
+    <form id="login-form" style="background:#1c1c22; border:1px solid #333; border-radius:10px; padding:28px 32px; width:320px; display:flex; flex-direction:column; gap:12px;">
+      <h2 style="margin:0 0 4px; font-size:16px;">Sign in to VDX Connect</h2>
+      <label style="font-size:12px; color:#aaa;">Device ID
+        <input id="login-device-id" type="text" autocomplete="off" required
+          style="display:block; width:100%; margin-top:4px; padding:8px; border-radius:6px; border:1px solid #444; background:#111; color:#eee; box-sizing:border-box;">
+      </label>
+      <label style="font-size:12px; color:#aaa;">Secret
+        <input id="login-secret" type="password" autocomplete="off" required
+          style="display:block; width:100%; margin-top:4px; padding:8px; border-radius:6px; border:1px solid #444; background:#111; color:#eee; box-sizing:border-box;">
+      </label>
+      <div id="login-error" style="color:#ff6b6b; font-size:12px; min-height:16px;"></div>
+      <button id="login-submit" type="submit" style="padding:9px; border-radius:6px; border:none; background:#4c6fff; color:#fff; font-weight:600; cursor:pointer;">Sign in</button>
+      <div style="font-size:11px; color:#777;">This is saved on this machine only and used to auto-sign-in on every future launch. Use Logout to clear it.</div>
+    </form>
   </div>
 
   <div id="main">
     <div id="content">
+      <div id="left-col">
 
-      <div id="incoming" class="panel">
-        <p id="incoming-text"></p>
-        <div class="btn-row">
-          <button id="btn-accept" class="primary">Accept</button>
-          <button id="btn-reject" class="danger">Reject</button>
+        <div id="incoming" class="panel">
+          <p id="incoming-text"></p>
+          <div class="btn-row">
+            <button id="btn-accept" class="primary">Accept</button>
+            <button id="btn-reject" class="danger">Reject</button>
+          </div>
         </div>
+
+        <div class="panel">
+          <h2>Connection</h2>
+          <div class="btn-row">
+            <button id="btn-request">Request Connection</button>
+            <button id="btn-end" class="danger" disabled>End Session</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Screen Share</h2>
+          <div class="btn-row" style="align-items:center;">
+            <button id="btn-share-screen" class="primary" disabled>Share My Screen</button>
+            <button id="btn-stop-share" class="danger" disabled style="display:none;">Stop Sharing</button>
+            <select id="quality-select" title="Stream quality">
+              <option value="auto" selected>Auto quality</option>
+              <option value="high">High (1080p/20fps)</option>
+              <option value="medium">Medium (720p/15fps)</option>
+              <option value="low">Low (480p/10fps)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Remote Tools</h2>
+          <div class="btn-row" style="margin-bottom:8px;">
+            <button id="btn-send-clipboard" class="small">Push My Clipboard</button>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-dim);">
+              <input type="checkbox" id="chk-auto-clipboard" /> Auto-sync clipboard
+            </label>
+          </div>
+          <div id="clipboard-status" style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px;"></div>
+          <div class="btn-row">
+            <button id="btn-request-screenshot" class="small">Request Screenshot</button>
+          </div>
+        </div>
+
+        <div class="panel" id="video-panel">
+          <div id="video-panel-header">
+            <h2 style="margin:0;">Remote Screen <span id="remote-video-label" style="color:var(--text); text-transform:none; letter-spacing:0;"></span></h2>
+            <button id="btn-fullscreen-view" class="small" disabled>Fullscreen</button>
+          </div>
+          <div id="video-stage" tabindex="0">
+            <video id="remote-video" autoplay playsinline></video>
+            <div id="video-placeholder">No one is sharing their screen yet.</div>
+            <div id="control-hint">Click here, then use your mouse/keyboard to control the remote device. Press Esc to release.</div>
+            <div id="local-preview-wrap">
+              <span>You</span>
+              <video id="local-preview" autoplay playsinline muted></video>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <div class="panel">
-        <h2>Connection</h2>
-        <div class="btn-row">
-          <button id="btn-request">Request Connection</button>
-          <button id="btn-end" class="danger" disabled>End Session</button>
+      <div id="right-col">
+        <div class="panel" id="chat-panel">
+          <div class="t-top" style="justify-content:space-between; display:flex; align-items:center;">
+            <h2 style="margin:0;">Chat</h2>
+            <button id="btn-clear-chat" class="small">Clear</button>
+          </div>
+          <div id="chat-log"></div>
+          <div id="chat-input-row">
+            <input id="chat-input" type="text" placeholder="Message the other device..." disabled />
+            <button id="btn-chat-send" class="primary" disabled>Send</button>
+          </div>
         </div>
-      </div>
 
-      <div class="panel">
-        <h2>Screen Share</h2>
-        <div class="btn-row">
-          <button id="btn-share-screen" class="primary" disabled>Share My Screen</button>
-          <button id="btn-stop-share" class="danger" disabled style="display:none;">Stop Sharing</button>
-        </div>
-      </div>
-
-      <div class="panel" id="video-panel">
-        <div id="video-panel-header">
-          <h2 style="margin:0;">Remote Screen <span id="remote-video-label" style="color:var(--text); text-transform:none; letter-spacing:0;"></span></h2>
-        </div>
-        <div id="video-stage">
-          <video id="remote-video" autoplay playsinline></video>
-          <div id="video-placeholder">No one is sharing their screen yet.</div>
+        <div class="panel">
+          <h2>Files</h2>
+          <div id="dropzone">Drag files or a folder here<br />or use the buttons below</div>
+          <div class="btn-row" style="margin-bottom:12px;">
+            <button id="btn-send-files" class="small" disabled>Send Files</button>
+            <button id="btn-send-folder" class="small" disabled>Send Folder</button>
+          </div>
+          <div id="transfer-list"></div>
         </div>
       </div>
 
@@ -297,6 +507,30 @@
         </div>
       </div>
       <div id="log"></div>
+    </div>
+
+    <div id="activity-panel">
+      <div id="activity-header">
+        <span>Activity Log</span>
+        <div>
+          <button id="btn-refresh-activity">Refresh</button>
+          <button id="btn-close-activity">Close</button>
+        </div>
+      </div>
+      <div id="activity-list"></div>
+    </div>
+  </div>
+
+  <div id="fullscreen-overlay">
+    <button id="btn-exit-fullscreen" class="danger">Exit Fullscreen (Esc)</button>
+    <button id="btn-toggle-floating-chat" class="small">Chat</button>
+    <video id="fullscreen-video" autoplay playsinline></video>
+    <div id="floating-chat">
+      <div id="floating-chat-log"></div>
+      <div id="floating-chat-input-row">
+        <input id="floating-chat-input" type="text" placeholder="Message the other device..." />
+        <button id="btn-floating-chat-send" class="primary">Send</button>
+      </div>
     </div>
   </div>
 

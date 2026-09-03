@@ -1,15 +1,16 @@
-// Fill this in per-machine. This file is NOT committed with real secrets —
-// copy device-config.example.js to device-config.js and put real values in,
-// device-config.js is gitignored.
-//
-// deviceId/secret must match one of the two pairs in the server's .env
+// Fill this in once, same values on every machine — this is now shared
+// infra config only. deviceId/secret are typed into the login screen on
+// first run instead (see main.js / renderer.js) — not set here anymore.
+// device-config.js is gitignored — copy this file to device-config.js and fill in real values.
 
 module.exports = {
-  deviceId: '-----------', // or 'device-friend' on the other machine
-  secret: '----------------------',
   serverUrl: 'https://--------------', // switch to your Railway URL once deployed
 
   // Metered TURN credentials — same on both machines, from dashboard.metered.ca
   turnUsername: '------------',
   turnPassword: '-------',
+  // Fine-grained GitHub PAT, scoped ONLY to UMBRELLACORP007/VDX-Releases with
+  // read-only Contents access. Used by electron-updater at runtime to check
+  // the private repo for new releases. Same token on every deployed machine.
+  githubUpdateToken: '----------------------',
 };

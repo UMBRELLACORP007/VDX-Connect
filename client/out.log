@@ -1,0 +1,9 @@
+
+[nut-js] nut-js native module load skipped (FORCE_NUTJS_STUB) — fix the rebuild, then flip this back off
+[elevate] app ready, checking elevation status...
+[elevate] platform=win32 alreadyElevated=false VDX_SKIP_ELEVATE=false
+[elevate] not elevated, attempting relaunch via PowerShell...
+[elevate] exe=E:\VDX Connect\VDX\client\node_modules\electron\dist\electron.exe
+[elevate] appPath=E:\VDX Connect\VDX\client
+[elevate] powershell exited with code 0
+[elevate] relaunch looks successful, exiting this (unelevated) instance

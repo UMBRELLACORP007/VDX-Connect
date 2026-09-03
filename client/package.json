@@ -1,17 +1,42 @@
 {
   "name": "vdx-connect-client",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "VDX Connect - Electron client (login, presence, WebRTC handshake)",
   "main": "src/main/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "postinstall": "electron-rebuild -f -w @nut-tree-fork/libnut",
+    "dist": "set CSC_IDENTITY_AUTO_DISCOVERY=false&&electron-builder",
+    "publish:win": "set CSC_IDENTITY_AUTO_DISCOVERY=false&&electron-builder --win --publish always"
   },
   "dependencies": {
     "socket.io-client": "^4.7.5",
-    "simple-peer": "^9.11.1"
+    "simple-peer": "^9.11.1",
+    "@nut-tree-fork/nut-js": "^4.2.6",
+    "electron-updater": "^6.3.9"
   },
   "devDependencies": {
-    "electron": "^31.0.0"
+    "electron": "^31.0.0",
+    "@electron/rebuild": "^4.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.vdxconnect.client",
+    "productName": "VDX Connect",
+    "win": {
+      "requestedExecutionLevel": "requireAdministrator",
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "UMBRELLACORP007",
+      "repo": "VDX-Releases",
+      "private": true
+    }
   },
   "allowScripts": {
     "electron@31.7.7": true
