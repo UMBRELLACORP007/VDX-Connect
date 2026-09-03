@@ -354,7 +354,7 @@ let mouse, keyboard, Button, Key;
 // can actually open. Remote input control is OFF until nut-js's native
 // build is fixed separately (see the rebuild note above) — that's a real,
 // separate fix, not something solved by editing this file again.
-const FORCE_NUTJS_STUB = true;
+const FORCE_NUTJS_STUB = false;
 if (FORCE_NUTJS_STUB) {
   nutJsLoadError = new Error('nut-js native module load skipped (FORCE_NUTJS_STUB) — fix the rebuild, then flip this back off');
   console.error('[nut-js]', nutJsLoadError.message);
@@ -533,7 +533,14 @@ function defaultDestRoot() {
   return path.join(app.getPath('downloads'), 'VDX Connect Received');
 }
 
-ipcMain.handle('fs:get-screenshots-dir', () => path.join(defaultDestRoot(), 'Screenshots'));
+// Screenshots (both the copy saved on the machine being captured, and the
+// copy the requester receives) always go to Pictures/VDX on both systems,
+// regardless of where regular file transfers land.
+function screenshotsDir() {
+  return path.join(app.getPath('pictures'), 'VDX');
+}
+
+ipcMain.handle('fs:get-screenshots-dir', () => screenshotsDir());
 
 // ===========================================================================
 // Saved login (deviceId + secret) — first-run login screen types these in
@@ -650,8 +657,22 @@ ipcMain.handle('screenshot:capture-to-temp', async () => {
 
   const png = sources[0].thumbnail.toPNG();
   const fileName = `vdx-screenshot-${Date.now()}.png`;
+
+  // Transfer pipeline reads from this temp path (fs:open-read expects a
+  // plain file path it can stream in chunks over the DataChannel).
   const tempPath = path.join(app.getPath('temp'), fileName);
   await fsp.writeFile(tempPath, png);
+
+  // Also persist a permanent copy on THIS machine — the one being
+  // captured — so both sides end up with the screenshot, not just the
+  // requester. Best-effort: a failure here shouldn't block sending the
+  // screenshot to the peer.
+  try {
+    await fsp.mkdir(screenshotsDir(), { recursive: true });
+    await fsp.writeFile(path.join(screenshotsDir(), fileName), png);
+  } catch (err) {
+    console.log(`[screenshot] failed to save local copy to Pictures/VDX: ${err.message}`);
+  }
 
   return { absPath: tempPath, relPath: fileName, size: png.length };
 });

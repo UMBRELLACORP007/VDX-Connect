@@ -1,6 +1,6 @@
 {
   "name": "vdx-connect-client",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "VDX Connect - Electron client (login, presence, WebRTC handshake)",
   "main": "src/main/main.js",
   "scripts": {
