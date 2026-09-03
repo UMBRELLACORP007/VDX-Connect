@@ -1,2 +1,6 @@
 node_modules/
 src/config/device-config.js
+*.log
+dist/
+build/
+out/
