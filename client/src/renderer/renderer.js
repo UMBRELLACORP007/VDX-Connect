@@ -3,6 +3,76 @@ const SimplePeer = require('simple-peer');
 const { ipcRenderer } = require('electron');
 const fs = require('fs');
 
+// ===========================================================================
+// Version label + live update status badge (titlebar)
+// ===========================================================================
+(async function initVersionBadge() {
+  const versionLabel = document.getElementById('version-label');
+  const updateStatus = document.getElementById('update-status');
+
+  // Show running version immediately.
+  try {
+    const ver = await ipcRenderer.invoke('app:version');
+    versionLabel.textContent = `v${ver}`;
+  } catch {
+    versionLabel.textContent = '';
+  }
+
+  function setUpdateBadge(text, colorVar, bgAlpha) {
+    updateStatus.textContent = text;
+    updateStatus.style.display = text ? 'inline-block' : 'none';
+    updateStatus.style.color = `var(${colorVar})`;
+    updateStatus.style.background = `rgba(var(--${colorVar.slice(2)}-rgb, 255,255,255), ${bgAlpha})`;
+    updateStatus.style.border = `1px solid var(${colorVar})`;
+  }
+
+  // Map colour names to actual CSS variables from the stylesheet.
+  const COLOURS = {
+    dim:   { color: '--text-dim',  bg: 'rgba(139,144,156,0.12)' },
+    blue:  { color: '--accent',    bg: 'rgba(79,140,255,0.12)'  },
+    green: { color: '--green',     bg: 'rgba(53,196,106,0.12)'  },
+    amber: { color: '--amber',     bg: 'rgba(217,164,65,0.12)'  },
+    red:   { color: '--red',       bg: 'rgba(229,72,77,0.12)'   },
+  };
+
+  function badge(text, scheme) {
+    const c = COLOURS[scheme] || COLOURS.dim;
+    updateStatus.textContent = text;
+    updateStatus.style.display = text ? 'inline-block' : 'none';
+    updateStatus.style.color = `var(${c.color})`;
+    updateStatus.style.background = c.bg;
+    updateStatus.style.border = `1px solid var(${c.color})`;
+  }
+
+  ipcRenderer.on('update:status', (e, { state, version, percent, message }) => {
+    switch (state) {
+      case 'checking':
+        badge('Checking for update…', 'dim');
+        break;
+      case 'available':
+        badge(`Downloading v${version}…`, 'blue');
+        break;
+      case 'downloading':
+        badge(`Downloading… ${percent}%`, 'blue');
+        break;
+      case 'downloaded':
+        badge(`v${version} ready — restarting…`, 'green');
+        break;
+      case 'up-to-date':
+        badge(`Up to date${version ? ' (v' + version + ')' : ''}`, 'green');
+        // Fade out after 5s — no need to keep showing "up to date" forever.
+        setTimeout(() => { updateStatus.style.display = 'none'; }, 5000);
+        break;
+      case 'error':
+        badge('Update check failed', 'red');
+        updateStatus.title = message || '';
+        break;
+      default:
+        updateStatus.style.display = 'none';
+    }
+  });
+})();
+
 const statusEl = document.getElementById('status');
 const peerStatusEl = document.getElementById('peer-status');
 const loginOverlayEl = document.getElementById('login-overlay');

@@ -364,6 +364,23 @@
 
   <div id="titlebar">
     <span>VDX Connect</span>
+    <div id="update-badge" style="
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; color: #8b909c;
+      -webkit-app-region: no-drag;
+      padding: 0 10px;
+    ">
+      <span id="version-label" style="opacity:0.6;"></span>
+      <span id="update-status" style="
+        display: none;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+      "></span>
+    </div>
     <div id="titlebar-controls">
       <button id="btn-win-minimize" title="Minimize">&#8211;</button>
       <button id="btn-win-fullscreen" title="Toggle fullscreen">&#9974;</button>

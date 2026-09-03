@@ -292,27 +292,43 @@ try {
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = false; // we call quitAndInstall() explicitly instead
 
+function sendUpdateStatus(payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('update:status', payload);
+  }
+}
+
 autoUpdater.on('checking-for-update', () => {
   console.log('[update] checking for update...');
+  sendUpdateStatus({ state: 'checking' });
 });
 autoUpdater.on('update-available', (info) => {
   console.log(`[update] update available: ${info.version} — downloading...`);
+  sendUpdateStatus({ state: 'available', version: info.version });
 });
-autoUpdater.on('update-not-available', () => {
+autoUpdater.on('update-not-available', (info) => {
   console.log('[update] already on latest version');
+  sendUpdateStatus({ state: 'up-to-date', version: info.version });
 });
 autoUpdater.on('error', (err) => {
+  const msg = err == null ? 'unknown' : (err.message || String(err));
   console.log(`[update] error: ${err == null ? 'unknown' : (err.stack || err.message)}`);
+  sendUpdateStatus({ state: 'error', message: msg });
 });
 autoUpdater.on('download-progress', (p) => {
   console.log(`[update] downloading: ${Math.round(p.percent)}%`);
+  sendUpdateStatus({ state: 'downloading', percent: Math.round(p.percent), bytesPerSecond: p.bytesPerSecond });
 });
 autoUpdater.on('update-downloaded', (info) => {
   console.log(`[update] update ${info.version} downloaded — installing and restarting now`);
+  sendUpdateStatus({ state: 'downloaded', version: info.version });
   // isSilent installs without showing the NSIS UI; isForceRunAfter relaunches
   // the app once the new version is installed.
-  autoUpdater.quitAndInstall(true, true);
+  setTimeout(() => autoUpdater.quitAndInstall(true, true), 2000); // small delay so UI can show the downloaded state
 });
+
+// Renderer can query the running version at any time.
+ipcMain.handle('app:version', () => app.getVersion());
 
 function checkForUpdates() {
   // Skip in dev — there's no packaged app / update feed to check against,
