@@ -1,0 +1,98 @@
+:root {
+  /* ---- Color: deep graphite-blue base, violet signal accent, amber for
+     pending/attention states. ---- */
+  --base-950: #07090e;
+  --base-900: #0b0e16;
+  --surface-800: #10141f;
+  --surface-700: #161c2b;
+  --surface-600: #1d2436;
+  --surface-500: #262f45;
+  --border-subtle: #232c40;
+  --border-strong: #37436099;
+
+  --text-primary: #eceef4;
+  --text-muted: #8b93a7;
+  --text-faint: #565f74;
+
+  --accent-500: #7c5cfc;
+  --accent-400: #9179ff;
+  --accent-300: #b6a6ff;
+  --accent-rgb: 124, 92, 252;
+  --accent-glow: rgba(124, 92, 252, 0.35);
+
+  --amber-500: #f5a623;
+  --amber-rgb: 245, 166, 35;
+  --amber-glow: rgba(245, 166, 35, 0.3);
+
+  --danger-500: #e5484d;
+  --danger-rgb: 229, 72, 77;
+  --danger-glow: rgba(229, 72, 77, 0.3);
+
+  --ok-500: #3ddc84;
+  --ok-rgb: 61, 220, 132;
+  --ok-glow: rgba(61, 220, 132, 0.3);
+
+  /* ---- Type ---- */
+  --font-ui: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-data: 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+
+  /* ---- Layout ---- */
+  --titlebar-h: 40px;
+  --rail-w: 220px;
+  --statusstrip-h: 44px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ---- Glass ---- */
+  --glass-bg: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
+  --glass-border: rgba(255,255,255,0.07);
+  --glass-shadow: 0 20px 60px -20px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.04) inset;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--base-950);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+input, select {
+  font-family: inherit;
+  color: inherit;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--glass-shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

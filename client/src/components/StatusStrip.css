@@ -1,0 +1,18 @@
+.status-strip {
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.status-strip-left { display: flex; align-items: baseline; gap: 8px; overflow: hidden; min-width: 0; }
+.status-strip-label { font-size: 11px; color: var(--text-faint); flex-shrink: 0; }
+.status-strip-value { font-size: 12.5px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+.status-strip-metrics { display: flex; align-items: center; gap: 16px; }
+.status-strip-metric { display: flex; align-items: baseline; gap: 5px; flex-shrink: 0; }
+.status-strip-metric-label { font-size: 10px; color: var(--text-faint); }
+.status-strip-metric-value { font-family: var(--font-data); font-size: 12px; color: var(--accent-400); }

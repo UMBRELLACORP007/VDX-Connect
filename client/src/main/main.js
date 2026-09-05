@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, desktopCapturer, dialog, shell, screen, Menu, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer, dialog, shell, screen, Menu, clipboard, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const fsp = fs.promises;
@@ -159,6 +159,20 @@ ipcMain.handle('get-screen-sources', async () => {
   return sources.map((s) => ({ id: s.id, name: s.name }));
 });
 
+// Real (unscaled) sizes for every display, in the same order
+// desktopCapturer.getSources({types:['screen']}) returns them above.
+// Electron doesn't officially document that the two orderings match, but in
+// practice both come from the OS's display enumeration order — this is a
+// reasonable, commonly-relied-on assumption, not a guaranteed contract.
+// Used so a shared non-primary monitor maps remote clicks against ITS real
+// resolution instead of always the primary display's.
+ipcMain.handle('display:get-all-sizes', () => {
+  return screen.getAllDisplays().map((d) => ({
+    width: Math.round(d.size.width * d.scaleFactor),
+    height: Math.round(d.size.height * d.scaleFactor),
+  }));
+});
+
 // Real (unscaled) primary display resolution — used by the *sharing* side to
 // tell the controller its true screen size, since the captured video track
 // may be downscaled (maxWidth/maxHeight 1920x1080 in the getUserMedia call).
@@ -180,6 +194,15 @@ function createWindow() {
     webPreferences: {
       contextIsolation: false,
       nodeIntegration: true,
+      // Electron defaults sandbox:true since v20, which disables Node
+      // integration in the renderer regardless of the nodeIntegration
+      // setting above (sandboxed renderers get no Node APIs without a
+      // preload/contextBridge). This app has no preload script and relies
+      // on require('electron') directly in the renderer (lib/ipc.js,
+      // lib/session.js) — without this line, that require() throws on
+      // load and the renderer never gets past module init, showing a
+      // blank white screen with the actual error only visible in DevTools.
+      sandbox: false,
       // Without this, Chromium throttles rAF/timers on hidden/minimized
       // windows, which is exactly why the local self-preview froze on
       // minimize (Bugs.txt). The screen-capture stream itself keeps
@@ -189,7 +212,26 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+  // Menu.setApplicationMenu(null) above removes the whole menu bar, which
+  // also removes Ctrl+Shift+I — that shortcut is normally wired to the
+  // "Toggle Developer Tools" menu item, not a global accelerator. globalShortcut
+  // gives DevTools access back without needing the menu at all.
+  globalShortcut.register('F12', () => {
+    if (mainWindow) mainWindow.webContents.toggleDevTools();
+  });
+
+  // TEMPORARY — remove once the white-screen issue is confirmed fixed.
+  // Auto-opens DevTools on launch so the actual renderer error is visible
+  // immediately instead of relying on a shortcut.
+  mainWindow.webContents.once('did-finish-load', () => {
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
+  });
+
+  // React (Vite) build is now the real UI — run `npm run build` in client/
+  // before packaging or launching. The old vanilla renderer/index.html is
+  // kept on disk as the functional reference until every panel below is
+  // confirmed at parity, but Electron no longer loads it.
+  mainWindow.loadFile(path.join(__dirname, '..', '..', 'dist', 'index.html'));
 
   // "Always open full-screen" (Bugs.txt) meant "fill the screen", not OS
   // exclusive fullscreen — that hid the taskbar like a game/kiosk mode.
@@ -247,6 +289,7 @@ app.whenReady().then(() => {
 // scenario left where the user needs a button to ask for it again.
 
 app.on('window-all-closed', () => {
+  globalShortcut.unregisterAll();
   if (process.platform !== 'darwin') app.quit();
 });
 
@@ -691,4 +734,157 @@ ipcMain.handle('screenshot:capture-to-temp', async () => {
   }
 
   return { absPath: tempPath, relPath: fileName, size: png.length };
+});
+
+// ===========================================================================
+// System information — did not exist anywhere in this project before (not
+// in this file, not in the old vanilla renderer). Built from scratch here
+// using only Node's built-in os module and Electron's own GPU info API, so
+// no new native dependency is introduced. CPU load is computed as a delta
+// between two os.cpus() samples 200ms apart (a single snapshot of
+// cpus()[i].times is cumulative since boot and useless as an instant
+// "percent busy" figure on its own).
+// ---------------------------------------------------------------------------
+const os = require('os');
+
+function sampleCpuTimes() {
+  return os.cpus().map((c) => ({ ...c.times, total: c.times.user + c.times.nice + c.times.sys + c.times.idle + c.times.irq }));
+}
+
+function cpuLoadPercentBetween(a, b) {
+  let idleDelta = 0;
+  let totalDelta = 0;
+  for (let i = 0; i < a.length; i++) {
+    idleDelta += b[i].idle - a[i].idle;
+    totalDelta += b[i].total - a[i].total;
+  }
+  if (totalDelta <= 0) return 0;
+  return Math.round((1 - idleDelta / totalDelta) * 100);
+}
+
+ipcMain.handle('system:get-info', async () => {
+  const before = sampleCpuTimes();
+  await new Promise((r) => setTimeout(r, 200));
+  const after = sampleCpuTimes();
+
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const cpus = os.cpus();
+
+  return {
+    hostname: os.hostname(),
+    platform: os.platform(),
+    arch: os.arch(),
+    uptimeSec: Math.round(os.uptime()),
+    cpuModel: cpus[0]?.model?.trim() || 'Unknown CPU',
+    cpuCores: cpus.length,
+    cpuLoadPercent: cpuLoadPercentBetween(before, after),
+    ramTotalBytes: totalMem,
+    ramFreeBytes: freeMem,
+    ramUsedPercent: Math.round(((totalMem - freeMem) / totalMem) * 100),
+    // Battery, per-GPU utilization %, and disk usage aren't available from
+    // Node/Electron built-ins without an additional native dependency —
+    // left out rather than faked. GPU model name (not usage %) is available
+    // separately via system:get-gpu-info below.
+  };
+});
+
+ipcMain.handle('system:get-gpu-info', async () => {
+  try {
+    const info = await app.getGPUInfo('basic');
+    const device = info?.gpuDevice?.[0];
+    return { gpuName: device ? `${device.vendorId ? `0x${device.vendorId.toString(16)} / ` : ''}${device.deviceId ? `0x${device.deviceId.toString(16)}` : 'Unknown device'}` : null, raw: info };
+  } catch (err) {
+    return { gpuName: null, error: err.message };
+  }
+});
+
+// ===========================================================================
+// Installed software (Windows only — this app ships requireAdministrator
+// NSIS on Windows, see package.json build config, so registry access is the
+// natural source here). Reads the standard Uninstall registry keys via
+// `reg query`, same approach Windows' own "Apps & Features" panel is built
+// on. NOT runtime-tested against a real Windows registry in this repo's dev
+// environment — the registry-query/parsing logic below is written to the
+// documented `reg query` output format, but flagging it as unverified since
+// I can't run reg.exe here to confirm the parser against a real machine.
+// ---------------------------------------------------------------------------
+const UNINSTALL_KEYS = [
+  'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+  'HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+  'HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+];
+
+function parseRegQueryOutput(output) {
+  // `reg query <key> /s` prints one blank-line-separated block per
+  // sub-key, each block starting with the key path then one
+  // "    ValueName    REG_TYPE    Value" line per value.
+  const blocks = output.split(/\r?\n\r?\n/).map((b) => b.trim()).filter(Boolean);
+  const apps = [];
+  for (const block of blocks) {
+    const lines = block.split(/\r?\n/);
+    if (lines.length < 2) continue;
+    const values = {};
+    for (const line of lines.slice(1)) {
+      const m = line.match(/^\s{4}(\S+)\s+(REG_\w+)\s+(.*)$/);
+      if (m) values[m[1]] = m[3].trim();
+    }
+    if (values.DisplayName) {
+      apps.push({
+        name: values.DisplayName,
+        version: values.DisplayVersion || null,
+        publisher: values.Publisher || null,
+        location: values.InstallLocation || null,
+        installDate: values.InstallDate || null, // YYYYMMDD per registry convention, formatted client-side
+      });
+    }
+  }
+  return apps;
+}
+
+ipcMain.handle('system:get-installed-software', async () => {
+  if (process.platform !== 'win32') {
+    return { apps: [], error: 'Installed-software listing is only implemented for Windows (registry-based).' };
+  }
+  const apps = [];
+  const errors = [];
+  for (const key of UNINSTALL_KEYS) {
+    try {
+      const output = execSync(`reg query "${key}" /s`, { encoding: 'utf16le', maxBuffer: 1024 * 1024 * 32 });
+      apps.push(...parseRegQueryOutput(output));
+    } catch (err) {
+      // A missing key (e.g. no WOW6432Node on a 32-bit machine) is normal,
+      // not an error worth surfacing — reg.exe exits non-zero either way,
+      // so only keep genuinely useful messages.
+      if (!/unable to find/i.test(err.message)) errors.push(err.message);
+    }
+  }
+  // De-dupe by name+version — the same app can legitimately appear under
+  // more than one of the three keys above.
+  const seen = new Set();
+  const deduped = apps.filter((a) => {
+    const k = `${a.name}::${a.version}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  return { apps: deduped, error: errors.length ? errors.join('; ') : null };
+});
+
+// ===========================================================================
+// Screen recording save — recording itself happens in the renderer via the
+// browser's built-in MediaRecorder API against the same stream already
+// shown in the Remote panel (no new capture path needed, reuses whatever
+// getUserMedia/RTCPeerConnection track is already flowing). This handler
+// just persists the resulting WebM bytes to disk, same dialog pattern as
+// fs:pick-files/fs:choose-save-dir above.
+// ---------------------------------------------------------------------------
+ipcMain.handle('recording:save', async (event, { buffer, suggestedName }) => {
+  const res = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: suggestedName || `VDX-recording-${Date.now()}.webm`,
+    filters: [{ name: 'WebM video', extensions: ['webm'] }],
+  });
+  if (res.canceled || !res.filePath) return { saved: false };
+  await fsp.writeFile(res.filePath, Buffer.from(buffer));
+  return { saved: true, path: res.filePath };
 });

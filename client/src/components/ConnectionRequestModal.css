@@ -1,0 +1,45 @@
+.req-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(5,6,10,0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.req-modal {
+  width: 340px;
+  padding: 28px;
+}
+
+.req-modal h3 { margin: 0 0 10px; font-size: 16px; }
+.req-modal p { margin: 0 0 20px; font-size: 13.5px; color: var(--text-muted); }
+
+.req-modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.req-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.req-btn--accept { background: var(--ok-500); color: #05130c; }
+.req-btn--decline { background: rgba(229,72,77,0.12); color: var(--danger-500); border: 1px solid var(--danger-500); }
+
+.req-reason-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-800);
+  border: 1px solid var(--border-subtle);
+  outline: none;
+  font-size: 13px;
+  margin-bottom: 16px;
+}

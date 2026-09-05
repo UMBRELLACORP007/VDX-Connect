@@ -1,31 +1,55 @@
 {
-  "name": "vdx-connect-client",
-  "version": "0.1.4",
-  "description": "VDX Connect - Electron client (login, presence, WebRTC handshake)",
+  "name": "vdx-connect",
+  "private": true,
+  "version": "1.0.0",
+  "description": "VDX Connect — private device-to-device remote control, file transfer, and chat.",
   "author": "UMBRELLACORP007",
   "main": "src/main/main.js",
+  "type": "commonjs",
   "scripts": {
-    "start": "electron .",
-    "postinstall": "electron-builder install-app-deps",
-    "dist": "set CSC_IDENTITY_AUTO_DISCOVERY=false&&electron-builder",
-    "publish:win": "set CSC_IDENTITY_AUTO_DISCOVERY=false&&electron-builder --win --publish always"
+    "dev": "vite",
+    "build": "vite build",
+    "start": "npm run build && electron .",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "dist:win": "npm run build && electron-builder --win",
+    "publish:win": "npm run build && electron-builder --win --publish always"
   },
   "dependencies": {
-    "socket.io-client": "^4.7.5",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@nut-tree-fork/nut-js": "^4.2.0",
+    "electron-updater": "^6.3.9",
+    "framer-motion": "^13.2.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "simple-peer": "^9.11.1",
-    "@nut-tree-fork/nut-js": "^4.2.6",
-    "electron-updater": "^6.3.9"
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
-    "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "oxlint": "^1.79.0",
+    "vite": "^8.2.2"
   },
   "build": {
-    "appId": "com.vdxconnect.client",
+    "appId": "com.umbrellacorp007.vdxconnect",
     "productName": "VDX Connect",
+    "files": [
+      "dist/**/*",
+      "src/main/**/*",
+      "src/config/device-config.js",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/@nut-tree-fork/**"
+    ],
     "win": {
-      "requestedExecutionLevel": "requireAdministrator",
-      "target": "nsis"
+      "target": ["nsis"],
+      "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
       "oneClick": false,
@@ -35,11 +59,7 @@
       "provider": "github",
       "owner": "UMBRELLACORP007",
       "repo": "VDX-Releases",
-      "private": true,
-      "releaseType": "release"
+      "private": true
     }
-  },
-  "allowScripts": {
-    "electron@31.7.7": true
   }
 }

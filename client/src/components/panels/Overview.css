@@ -1,0 +1,43 @@
+.overview-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 32px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.overview-stage {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 8px;
+}
+
+.overview-end-btn {
+  margin-top: 6px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  color: var(--danger-500);
+  border: 1px solid var(--danger-500);
+  background: rgba(229,72,77,0.08);
+}
+
+.overview-cards {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.overview-note {
+  font-size: 12px;
+  color: var(--text-faint);
+  text-align: center;
+  max-width: 480px;
+  line-height: 1.5;
+}

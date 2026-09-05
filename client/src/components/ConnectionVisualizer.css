@@ -1,0 +1,84 @@
+.conn-viz {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 48px 24px;
+}
+
+.conn-viz-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.conn-node-glyph {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.conn-node-ring {
+  --ring-color: var(--text-faint);
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-800);
+  transition: border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+}
+
+.conn-node-ring.is-online {
+  border-color: var(--ring-color);
+  box-shadow: 0 0 0 1px var(--ring-color) inset, 0 0 24px -4px var(--ring-color);
+}
+
+.conn-node-core {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(150deg, var(--surface-600), var(--surface-800));
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4) inset;
+}
+
+.conn-node-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.conn-viz-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+}
+
+.conn-viz-svg {
+  width: 220px;
+  height: 30px;
+  overflow: visible;
+}
+
+.conn-viz-svg.is-broken line {
+  stroke-dasharray: 4 6;
+  opacity: 0.25;
+}
+
+.conn-viz-badge {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid;
+  background: rgba(255,255,255,0.03);
+}

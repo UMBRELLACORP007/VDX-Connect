@@ -1,0 +1,54 @@
+.panel-shell {
+  padding: 28px 32px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panel-shell-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.panel-shell-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.panel-shell-subtitle {
+  font-size: 12.5px;
+  color: var(--text-faint);
+  margin: 0;
+}
+
+.panel-shell-toolbar {
+  display: flex;
+  gap: 8px;
+}
+
+.panel-shell-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.panel-empty {
+  padding: 40px;
+  text-align: center;
+  max-width: 420px;
+  margin: 40px auto;
+}
+
+.panel-empty h3 {
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+
+.panel-empty p {
+  font-size: 13px;
+  color: var(--text-faint);
+  line-height: 1.6;
+  margin: 0;
+}
