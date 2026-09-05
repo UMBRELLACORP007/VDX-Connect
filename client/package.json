@@ -1,8 +1,8 @@
 {
   "name": "vdx-connect",
   "private": true,
-  "version": "1.0.0",
-  "description": "VDX Connect — private device-to-device remote control, file transfer, and chat.",
+  "version": "1.1.0",
+  "description": "VDX Connect \u2014 private device-to-device remote control, file transfer, and chat.",
   "author": "UMBRELLACORP007",
   "main": "src/main/main.js",
   "type": "commonjs",
@@ -48,7 +48,9 @@
       "**/node_modules/@nut-tree-fork/**"
     ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
@@ -59,7 +61,8 @@
       "provider": "github",
       "owner": "UMBRELLACORP007",
       "repo": "VDX-Releases",
-      "private": true
+      "private": true,
+      "releaseType": "release"
     }
   }
 }

@@ -220,13 +220,6 @@ function createWindow() {
     if (mainWindow) mainWindow.webContents.toggleDevTools();
   });
 
-  // TEMPORARY — remove once the white-screen issue is confirmed fixed.
-  // Auto-opens DevTools on launch so the actual renderer error is visible
-  // immediately instead of relying on a shortcut.
-  mainWindow.webContents.once('did-finish-load', () => {
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
-  });
-
   // React (Vite) build is now the real UI — run `npm run build` in client/
   // before packaging or launching. The old vanilla renderer/index.html is
   // kept on disk as the functional reference until every panel below is
