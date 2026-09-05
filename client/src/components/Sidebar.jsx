@@ -22,8 +22,7 @@ export default function Sidebar({ activePanel, onSelectPanel }) {
   return (
     <div className="sidebar">
       <div className="sidebar-brand">
-        <span className="sidebar-brand-mark">VDX</span>
-        <span className="sidebar-brand-name">Connect</span>
+        <img src="./brand/logo-badge.png" alt="VDX Connect" className="sidebar-brand-logo" draggable={false} />
       </div>
 
       <nav className="sidebar-nav">

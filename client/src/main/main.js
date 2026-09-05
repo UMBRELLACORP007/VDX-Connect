@@ -191,6 +191,11 @@ function createWindow() {
     height: 720,
     frame: false, // custom titlebar drawn in renderer (Bugs.txt: "remove title bar")
     show: false, // avoid a flash at the default 1100x720 size before we maximize
+    // Packaged Windows builds get their taskbar/window icon baked into the
+    // .exe by electron-builder (build.win.icon in package.json) — this only
+    // matters for `npm start`/dev runs and for Linux, where the window icon
+    // isn't otherwise set.
+    icon: path.join(__dirname, '../../build/icon.png'),
     webPreferences: {
       contextIsolation: false,
       nodeIntegration: true,

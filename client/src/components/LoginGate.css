@@ -25,13 +25,11 @@
   gap: 4px;
 }
 
-.login-gate-title {
-  font-size: 18px;
-  margin: 0 0 2px;
-  background: linear-gradient(135deg, var(--accent-300), var(--accent-500));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.login-gate-logo {
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 18px;
+  display: block;
 }
 
 .login-gate-subtitle {

@@ -54,7 +54,7 @@ function LoginForm({ auth }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
     >
-      <h2 className="login-gate-title">VDX Connect</h2>
+      <img src="./brand/logo-badge.png" alt="VDX Connect" className="login-gate-logo" draggable={false} />
       <p className="login-gate-subtitle">Sign in with your Device ID and Secret.</p>
 
       <label className="login-gate-label">Device ID</label>

@@ -12,24 +12,14 @@
 
 .sidebar-brand {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
-  padding: 6px 10px 18px;
+  justify-content: center;
+  padding: 10px 0 22px;
 }
 
-.sidebar-brand-mark {
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.02em;
-  background: linear-gradient(135deg, var(--accent-300), var(--accent-500));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.sidebar-brand-name {
-  font-size: 13px;
-  color: var(--text-muted);
+.sidebar-brand-logo {
+  display: block;
+  width: 128px;
+  height: 128px;
 }
 
 .sidebar-nav {
