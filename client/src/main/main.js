@@ -353,7 +353,13 @@ autoUpdater.on('error', (err) => {
 });
 autoUpdater.on('download-progress', (p) => {
   console.log(`[update] downloading: ${Math.round(p.percent)}%`);
-  sendUpdateStatus({ state: 'downloading', percent: Math.round(p.percent), bytesPerSecond: p.bytesPerSecond });
+  sendUpdateStatus({
+    state: 'downloading',
+    percent: Math.round(p.percent),
+    bytesPerSecond: p.bytesPerSecond,
+    total: p.total,
+    transferred: p.transferred,
+  });
 });
 autoUpdater.on('update-downloaded', (info) => {
   console.log(`[update] update ${info.version} downloaded — installing and restarting now`);

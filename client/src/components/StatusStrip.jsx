@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useConnection } from '../state/ConnectionContext';
+import { useAppUpdate } from '../hooks/useAppUpdate';
 import './StatusStrip.css';
 
 const LABEL = {
@@ -11,8 +12,37 @@ const LABEL = {
   lost: 'Connection lost',
 };
 
+function UpdateIndicator({ update }) {
+  const { version, state, percent, speed, eta } = update;
+
+  let label = null;
+  if (state === 'checking') label = 'Checking for updates…';
+  else if (state === 'available') label = 'Update found — starting download…';
+  else if (state === 'downloading') {
+    label = `Downloading update ${percent != null ? `${percent}%` : ''}`.trim();
+  } else if (state === 'downloaded') label = 'Update ready — restarting…';
+  else if (state === 'error') label = 'Update check failed';
+
+  return (
+    <div className="status-strip-metric status-strip-update">
+      {label && (
+        <>
+          <span className="status-strip-metric-label">{label}</span>
+          {state === 'downloading' && (speed || eta) && (
+            <span className="status-strip-update-detail">
+              {speed || ''}{speed && eta ? ' · ' : ''}{eta ? `ETA ${eta}` : ''}
+            </span>
+          )}
+        </>
+      )}
+      {version && <span className="status-strip-metric-value">v{version}</span>}
+    </div>
+  );
+}
+
 export default function StatusStrip() {
   const { status, latencyMs, connectionType, peerDeviceId } = useConnection();
+  const update = useAppUpdate();
 
   return (
     <div className="status-strip">
@@ -46,6 +76,7 @@ export default function StatusStrip() {
             <span className="status-strip-metric-value">{connectionType}</span>
           </div>
         )}
+        <UpdateIndicator update={update} />
       </div>
     </div>
   );

@@ -16,3 +16,6 @@
 .status-strip-metric { display: flex; align-items: baseline; gap: 5px; flex-shrink: 0; }
 .status-strip-metric-label { font-size: 10px; color: var(--text-faint); }
 .status-strip-metric-value { font-family: var(--font-data); font-size: 12px; color: var(--accent-400); }
+
+.status-strip-update { gap: 8px; }
+.status-strip-update-detail { font-family: var(--font-data); font-size: 10px; color: var(--text-faint); }
