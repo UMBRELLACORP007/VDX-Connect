@@ -68,6 +68,8 @@ function SoftwareList({ apps, loading, error, search, setSearch, onRefresh, disa
         <div className="sysinfo-software-empty">Loading…</div>
       ) : error && (apps || []).length === 0 ? (
         <div className="sysinfo-software-empty">{error}</div>
+      ) : (apps || []).length === 0 ? (
+        <div className="sysinfo-software-empty">No installed applications found.</div>
       ) : filteredApps.length === 0 ? (
         <div className="sysinfo-software-empty">No matching applications</div>
       ) : (

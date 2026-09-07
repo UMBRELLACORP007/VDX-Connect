@@ -16,6 +16,9 @@ export const ipc = {
   // --- window controls ---
   minimizeWindow: () => ipcRenderer.send('window:minimize'),
   closeWindow: () => ipcRenderer.send('window:close'),
+  onConfirmClose: (callback) => ipcRenderer.on('window:confirm-close', callback),
+  offConfirmClose: (callback) => ipcRenderer.removeListener('window:confirm-close', callback),
+  respondToClose: (confirmed) => ipcRenderer.send('window:close-response', confirmed),
   toggleFullscreen: () => ipcRenderer.send('window:toggle-fullscreen'),
   isFullscreen: () => ipcRenderer.invoke('window:is-fullscreen'),
 

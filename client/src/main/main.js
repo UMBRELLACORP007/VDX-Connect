@@ -184,6 +184,7 @@ ipcMain.handle('display:get-primary-size', () => {
 });
 
 let mainWindow = null;
+let allowClose = false; // set true right before any programmatic close/quit that should skip the confirmation dialog below
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -243,7 +244,42 @@ function createWindow() {
   mainWindow.on('unmaximize', () => mainWindow.webContents.send('window:state', { fullscreen: false }));
   mainWindow.on('enter-full-screen', () => mainWindow.webContents.send('window:state', { fullscreen: true }));
   mainWindow.on('leave-full-screen', () => mainWindow.webContents.send('window:state', { fullscreen: false }));
+
+  // "Quit VDX Connect?" confirmation on close. This fires for BOTH the
+  // custom titlebar's X button (ipc 'window:close' below just calls
+  // mainWindow.close()) and Alt+F4 — Electron/Windows route both through
+  // the exact same BrowserWindow 'close' event, there's no way to tell
+  // them apart from inside the app, so asking here covers both the same
+  // way (which also means fixing this one handler fixes both at once —
+  // no separate Alt+F4 case to handle). What this can't intercept — and
+  // isn't meant to — is Task Manager's "End task"/"End process" or
+  // `taskkill /F`: those terminate the OS process directly without ever
+  // going through Electron's normal window-close path, so the app
+  // disappears immediately with no prompt, exactly like closing any
+  // other program that way. That's normal OS behavior, not a bug.
+  //
+  // Was: dialog.showMessageBoxSync — the native OS message box, which is
+  // why it looked like "Windows' popup" instead of our UI. Now: prevent
+  // the close, ask the renderer to show our own in-app confirm modal
+  // (window:confirm-close), and wait for it to report back which button
+  // the user picked (window:close-response). allowClose gets set only on
+  // confirmation, then we re-trigger the real close.
+  mainWindow.on('close', (e) => {
+    if (allowClose) return;
+    e.preventDefault();
+    mainWindow.webContents.send('window:confirm-close');
+  });
 }
+
+// Registered once at module scope (not inside createWindow, which can run
+// more than once — e.g. macOS activate-with-no-windows, or the elevation-
+// failure fallback below) so we don't stack up duplicate listeners that
+// would each try to close the window on a single confirm click.
+ipcMain.on('window:close-response', (e, confirmed) => {
+  if (!confirmed || !mainWindow) return;
+  allowClose = true;
+  mainWindow.close();
+});
 
 // ---- Custom titlebar controls (needed once frame:false removes the OS one) ----
 ipcMain.on('window:minimize', () => mainWindow && mainWindow.minimize());
@@ -371,7 +407,13 @@ autoUpdater.on('update-downloaded', (info) => {
   sendUpdateStatus({ state: 'downloaded', version: info.version });
   // isSilent installs without showing the NSIS UI; isForceRunAfter relaunches
   // the app once the new version is installed.
-  setTimeout(() => autoUpdater.quitAndInstall(true, true), 2000); // small delay so UI can show the downloaded state
+  setTimeout(() => {
+    // Bypass the "Quit VDX Connect?" confirmation for this one — it's an
+    // automatic, already-downloaded update installing itself, not the user
+    // asking to close the app.
+    allowClose = true;
+    autoUpdater.quitAndInstall(true, true);
+  }, 2000); // small delay so UI can show the downloaded state
 });
 
 // Renderer can query the running version at any time.
@@ -812,73 +854,91 @@ ipcMain.handle('system:get-gpu-info', async () => {
 // ===========================================================================
 // Installed software (Windows only — this app ships requireAdministrator
 // NSIS on Windows, see package.json build config, so registry access is the
-// natural source here). Reads the standard Uninstall registry keys via
-// `reg query`, same approach Windows' own "Apps & Features" panel is built
-// on. NOT runtime-tested against a real Windows registry in this repo's dev
-// environment — the registry-query/parsing logic below is written to the
-// documented `reg query` output format, but flagging it as unverified since
-// I can't run reg.exe here to confirm the parser against a real machine.
+// natural source here). Reads the standard Uninstall registry keys.
+//
+// Originally shelled out to `reg query <key> /s` and hand-parsed the text
+// output with execSync(..., { encoding: 'utf16le' }). That encoding was
+// wrong — reg.exe writes its console output using the active OEM/ANSI
+// codepage, not UTF-16LE — so every line came back as mojibake and the
+// DisplayName regex never matched a single block, silently returning an
+// empty apps list with no error (looked to the user like "no matching
+// applications" instead of a real failure).
+//
+// Fixed by asking PowerShell to do both the registry read AND the
+// serialization: it collects DisplayName/DisplayVersion/Publisher/
+// InstallLocation/InstallDate across all three Uninstall keys, converts to
+// JSON, and writes that JSON to a temp file with an explicit -Encoding
+// utf8. Reading a UTF-8 file back in Node sidesteps the console-encoding
+// problem entirely — there's no stdout text to misinterpret.
 // ---------------------------------------------------------------------------
-const UNINSTALL_KEYS = [
-  'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
-  'HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
-  'HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+const UNINSTALL_REG_PATHS = [
+  'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+  'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+  'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
 ];
-
-function parseRegQueryOutput(output) {
-  // `reg query <key> /s` prints one blank-line-separated block per
-  // sub-key, each block starting with the key path then one
-  // "    ValueName    REG_TYPE    Value" line per value.
-  const blocks = output.split(/\r?\n\r?\n/).map((b) => b.trim()).filter(Boolean);
-  const apps = [];
-  for (const block of blocks) {
-    const lines = block.split(/\r?\n/);
-    if (lines.length < 2) continue;
-    const values = {};
-    for (const line of lines.slice(1)) {
-      const m = line.match(/^\s{4}(\S+)\s+(REG_\w+)\s+(.*)$/);
-      if (m) values[m[1]] = m[3].trim();
-    }
-    if (values.DisplayName) {
-      apps.push({
-        name: values.DisplayName,
-        version: values.DisplayVersion || null,
-        publisher: values.Publisher || null,
-        location: values.InstallLocation || null,
-        installDate: values.InstallDate || null, // YYYYMMDD per registry convention, formatted client-side
-      });
-    }
-  }
-  return apps;
-}
 
 ipcMain.handle('system:get-installed-software', async () => {
   if (process.platform !== 'win32') {
     return { apps: [], error: 'Installed-software listing is only implemented for Windows (registry-based).' };
   }
-  const apps = [];
-  const errors = [];
-  for (const key of UNINSTALL_KEYS) {
-    try {
-      const output = execSync(`reg query "${key}" /s`, { encoding: 'utf16le', maxBuffer: 1024 * 1024 * 32 });
-      apps.push(...parseRegQueryOutput(output));
-    } catch (err) {
-      // A missing key (e.g. no WOW6432Node on a 32-bit machine) is normal,
-      // not an error worth surfacing — reg.exe exits non-zero either way,
-      // so only keep genuinely useful messages.
-      if (!/unable to find/i.test(err.message)) errors.push(err.message);
+
+  const tmpFile = path.join(os.tmpdir(), `vdx-installed-software-${Date.now()}.json`);
+  const psPaths = UNINSTALL_REG_PATHS.map((p) => `'${p}'`).join(',');
+  // -ErrorAction SilentlyContinue on Get-ChildItem: a missing key (e.g. no
+  // WOW6432Node on a 32-bit machine) is normal, not worth surfacing as an
+  // error. Where-Object filters out the many sub-keys that have no
+  // DisplayName at all (patches, components, etc. — not real apps).
+  const psScript = [
+    `$items = Get-ChildItem -Path ${psPaths} -ErrorAction SilentlyContinue |`,
+    `  Get-ItemProperty -ErrorAction SilentlyContinue |`,
+    `  Where-Object { $_.DisplayName } |`,
+    `  Select-Object DisplayName, DisplayVersion, Publisher, InstallLocation, InstallDate;`,
+    `$items | ConvertTo-Json -Compress -Depth 3 | Out-File -FilePath '${tmpFile}' -Encoding utf8`,
+  ].join(' ');
+
+  try {
+    execSync(`powershell -NoProfile -NonInteractive -Command "${psScript.replace(/"/g, '\\"')}"`, {
+      windowsHide: true,
+      timeout: 20000,
+      maxBuffer: 1024 * 1024 * 8,
+    });
+
+    let raw = await fsp.readFile(tmpFile, 'utf8').catch(() => '');
+    fsp.unlink(tmpFile).catch(() => {}); // best-effort cleanup, don't fail the response over it
+
+    // PowerShell's `-Encoding utf8` (Windows PowerShell 5.1, not PS Core)
+    // always writes a UTF-8 byte-order-mark, and Node's 'utf8' decoding
+    // does NOT strip it — it comes through as a literal U+FEFF character
+    // at the start of the string. JSON.parse then fails on that leading
+    // char: "Unexpected token '\ufeff'". Strip it before parsing.
+    raw = raw.replace(/^\uFEFF/, '');
+
+    if (!raw.trim()) return { apps: [], error: null }; // genuinely zero DisplayName entries found
+
+    let parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) parsed = [parsed]; // ConvertTo-Json returns a bare object (not a 1-item array) when there's only one result
+
+    const seen = new Set();
+    const apps = [];
+    for (const item of parsed) {
+      if (!item || !item.DisplayName) continue;
+      const key = `${item.DisplayName}::${item.DisplayVersion || ''}`;
+      if (seen.has(key)) continue; // same app can legitimately appear under more than one of the three keys above
+      seen.add(key);
+      apps.push({
+        name: item.DisplayName,
+        version: item.DisplayVersion || null,
+        publisher: item.Publisher || null,
+        location: item.InstallLocation || null,
+        installDate: item.InstallDate || null, // YYYYMMDD per registry convention, formatted client-side
+      });
     }
+    apps.sort((a, b) => a.name.localeCompare(b.name));
+    return { apps, error: null };
+  } catch (err) {
+    fsp.unlink(tmpFile).catch(() => {});
+    return { apps: [], error: `Could not read installed software: ${err.message}` };
   }
-  // De-dupe by name+version — the same app can legitimately appear under
-  // more than one of the three keys above.
-  const seen = new Set();
-  const deduped = apps.filter((a) => {
-    const k = `${a.name}::${a.version}`;
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
-  return { apps: deduped, error: errors.length ? errors.join('; ') : null };
 });
 
 // ===========================================================================

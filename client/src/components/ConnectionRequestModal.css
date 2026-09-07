@@ -32,6 +32,7 @@
 
 .req-btn--accept { background: var(--ok-500); color: #05130c; }
 .req-btn--decline { background: rgba(229,72,77,0.12); color: var(--danger-500); border: 1px solid var(--danger-500); }
+.req-btn--neutral { background: var(--surface-800); color: var(--text-primary); border: 1px solid var(--border-subtle); }
 
 .req-reason-input {
   width: 100%;

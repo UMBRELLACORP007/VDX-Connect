@@ -6,6 +6,7 @@ import StatusStrip from './components/StatusStrip';
 import ContentArea from './components/ContentArea';
 import { LoginGate } from './components/LoginGate';
 import ConnectionRequestModal from './components/ConnectionRequestModal';
+import QuitConfirmModal from './components/QuitConfirmModal';
 import { ConnectionProvider, useConnection } from './state/ConnectionContext';
 import { PanelNavProvider } from './state/PanelNavContext';
 import { AuthActionsProvider } from './state/AuthActionsContext';
@@ -69,6 +70,7 @@ function Shell() {
         </div>
       </div>
       <ConnectionRequestModal fromDeviceId={incomingRequest} onAccept={acceptIncoming} onDecline={rejectIncoming} />
+      <QuitConfirmModal />
     </div>
   );
 }
