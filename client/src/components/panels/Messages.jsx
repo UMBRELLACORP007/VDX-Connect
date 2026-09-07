@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PanelShell } from './PanelShell';
 import { useConnection } from '../../state/ConnectionContext';
+import { CONNECTED_DEVICE_LABEL } from '../../lib/labels';
 import './Messages.css';
 
 export default function Messages() {
@@ -27,7 +28,7 @@ export default function Messages() {
   return (
     <PanelShell
       title="Messages"
-      subtitle={peerDeviceId ? `Synced with ${peerDeviceId}` : 'Synced in real time, saved to history.'}
+      subtitle={peerDeviceId ? `Synced with ${CONNECTED_DEVICE_LABEL}` : 'Synced in real time, saved to history.'}
       toolbar={<button className="messages-clear-btn" onClick={clearChatHistory}>Clear</button>}
     >
       <div className="messages-panel">

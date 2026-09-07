@@ -107,3 +107,46 @@
   color: var(--text-faint);
   font-size: 12.5px;
 }
+
+.sysinfo-device-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 3px;
+  background: var(--surface-800);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.sysinfo-device-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  color: var(--text-muted);
+}
+
+.sysinfo-device-tab.is-active {
+  background: var(--surface-600);
+  color: var(--text-primary);
+}
+
+.sysinfo-device-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.sysinfo-device-dot.is-online {
+  background: var(--ok-500);
+  box-shadow: 0 0 6px 1px var(--ok-glow);
+}
+
+.sysinfo-peer-notice {
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}

@@ -794,12 +794,18 @@ ipcMain.handle('system:get-info', async () => {
 });
 
 ipcMain.handle('system:get-gpu-info', async () => {
+  // Returns raw numeric ids rather than a pre-formatted string — vendor
+  // name lookup happens client-side (src/lib/gpuFormat.js) so the exact
+  // same formatting is used for this machine's own GPU and for whatever a
+  // peer reports about theirs (peer GPU info arrives as this same shape
+  // over the DataChannel, see lib/session.js 'sysinfo').
   try {
     const info = await app.getGPUInfo('basic');
     const device = info?.gpuDevice?.[0];
-    return { gpuName: device ? `${device.vendorId ? `0x${device.vendorId.toString(16)} / ` : ''}${device.deviceId ? `0x${device.deviceId.toString(16)}` : 'Unknown device'}` : null, raw: info };
+    if (!device) return { vendorId: null, deviceId: null, error: 'No GPU device reported' };
+    return { vendorId: device.vendorId ?? null, deviceId: device.deviceId ?? null };
   } catch (err) {
-    return { gpuName: null, error: err.message };
+    return { vendorId: null, deviceId: null, error: err.message };
   }
 });
 

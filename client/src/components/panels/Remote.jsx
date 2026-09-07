@@ -5,6 +5,7 @@ import { usePanelNav } from '../../state/PanelNavContext';
 import { useInputCapture } from '../../hooks/useInputCapture';
 import { useScreenRecording } from '../../hooks/useScreenRecording';
 import { ipc } from '../../lib/ipc';
+import { settings } from '../../lib/settingsStore';
 import './Remote.css';
 
 const TOOLS = ['Screen Share', 'Files', 'Screenshot', 'Quality'];
@@ -161,7 +162,7 @@ export default function Remote() {
                   )}
                 </AnimatePresence>
               </div>
-              <select className="remote-tool-select" onChange={(e) => setQuality(e.target.value)} defaultValue="auto">
+              <select className="remote-tool-select" onChange={(e) => setQuality(e.target.value)} defaultValue={settings.getDefaultQuality()}>
                 <option value="auto">Auto quality</option>
                 <option value="high">High (1080p)</option>
                 <option value="medium">Medium (720p)</option>

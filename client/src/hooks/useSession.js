@@ -26,6 +26,8 @@ export function useSession(auth) {
   // incomingBatches: { [batchId]: { label, total } } — pending accept/decline prompts
   const [incomingBatches, setIncomingBatches] = useState({});
   const [screenshotNotices, setScreenshotNotices] = useState([]);
+  const [peerSystemInfo, setPeerSystemInfo] = useState(null); // { info, gpu, at } | null
+  const [peerSoftware, setPeerSoftware] = useState({ apps: [], error: null, loading: false });
 
   useEffect(() => {
     if (!auth?.token || !auth?.deviceId) return;
@@ -73,6 +75,9 @@ export function useSession(auth) {
         setIncomingBatches((b) => { const next = { ...b }; delete next[batchId]; return next; })),
       session.on('screenshot:received', ({ name, size }) =>
         setScreenshotNotices((n) => [...n.slice(-19), { name, size, at: Date.now() }])),
+
+      session.on('peer:sysinfo', (payload) => setPeerSystemInfo(payload)),
+      session.on('peer:software', (payload) => setPeerSoftware(payload ? { ...payload, loading: false } : { apps: [], error: null, loading: false })),
     ];
 
     session.connect();
@@ -103,13 +108,19 @@ export function useSession(auth) {
   const cancelIncomingTransfer = useCallback((id) => sessionRef.current?.cancelIncomingTransfer(id), []);
   const requestScreenshot = useCallback(() => sessionRef.current?.requestScreenshot(), []);
   const fetchActivityLog = useCallback((limit) => sessionRef.current?.fetchActivityLog(limit) ?? Promise.resolve([]), []);
+  const requestPeerSoftware = useCallback(() => {
+    setPeerSoftware((s) => ({ ...s, loading: true }));
+    sessionRef.current?.requestPeerSoftware();
+  }, []);
 
   return {
     status, peerDeviceId, incomingRequest, rejectedReason,
+    myDeviceId: auth?.deviceId ?? null,
     latencyMs, fps, connectionType, remoteScreenSize,
     remoteStream, localStream, sharing,
     messages, logs, incomingClipboard,
     transfers, incomingBatches, screenshotNotices,
+    peerSystemInfo, peerSoftware, requestPeerSoftware,
     requestConnection, acceptIncoming, rejectIncoming, endSession,
     sendChatMessage, clearChatHistory,
     startScreenShare, stopScreenShare, setQuality, sendControl, reportMeasuredFps,

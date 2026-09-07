@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useConnection } from '../state/ConnectionContext';
 import { useAppUpdate } from '../hooks/useAppUpdate';
+import { CONNECTED_DEVICE_LABEL } from '../lib/labels';
 import './StatusStrip.css';
 
 const LABEL = {
@@ -58,7 +59,7 @@ export default function StatusStrip() {
             transition={{ duration: 0.15 }}
           >
             {LABEL[status] || status}
-            {peerDeviceId && status !== 'session-active' ? ` (${peerDeviceId})` : ''}
+            {peerDeviceId && status !== 'session-active' ? ` (${CONNECTED_DEVICE_LABEL})` : ''}
           </motion.span>
         </AnimatePresence>
       </div>

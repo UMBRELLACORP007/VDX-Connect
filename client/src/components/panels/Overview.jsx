@@ -4,6 +4,8 @@ import ConnectionPanel from '../ConnectionPanel';
 import DeviceCard from '../DeviceCard';
 import { useConnection } from '../../state/ConnectionContext';
 import { useSystemInfo } from '../../hooks/useSystemInfo';
+import { formatGpuInfo } from '../../lib/gpuFormat';
+import { MY_DEVICE_LABEL, CONNECTED_DEVICE_LABEL } from '../../lib/labels';
 import './Overview.css';
 
 export default function Overview() {
@@ -14,7 +16,7 @@ export default function Overview() {
     cpu: info.cpuLoadPercent,
     ram: info.ramUsedPercent,
     os: `${info.platform} ${info.arch}`,
-    gpuName: gpu?.gpuName,
+    gpuName: formatGpuInfo(gpu),
   } : {};
 
   return (
@@ -25,7 +27,7 @@ export default function Overview() {
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
     >
       <div className="overview-stage glass-panel">
-        <ConnectionVisualizer status={status} myDeviceName="My Device" peerDeviceName={peerDeviceId || 'Peer Device'} />
+        <ConnectionVisualizer status={status} myDeviceName={MY_DEVICE_LABEL} peerDeviceName={peerDeviceId ? CONNECTED_DEVICE_LABEL : 'Peer Device'} />
         <ConnectionPanel
           status={status}
           latencyMs={latencyMs}
@@ -38,14 +40,14 @@ export default function Overview() {
       </div>
 
       <div className="overview-cards">
-        <DeviceCard name="My Device" online isLocal metrics={{ ...myMetrics, netMs: latencyMs }} />
-        <DeviceCard name={peerDeviceId || 'Peer Device'} online={status !== 'offline' && status !== 'idle'} metrics={{}} />
+        <DeviceCard name={MY_DEVICE_LABEL} online isLocal metrics={{ ...myMetrics, netMs: latencyMs }} />
+        <DeviceCard name={peerDeviceId ? CONNECTED_DEVICE_LABEL : 'Peer Device'} online={status !== 'offline' && status !== 'idle'} metrics={{}} />
       </div>
 
       <p className="overview-note">
-        My Device's CPU/RAM/GPU come from this machine's own OS — real numbers, polled every 2s. The peer's
-        card stays empty: there's no protocol in this app yet to sync a peer's system stats over the
-        connection, so nothing is invented for it.
+        My Device's CPU/RAM/GPU come from this machine's own OS — real numbers, polled every 2s. Once a
+        session is active, the Connected Device's own live stats and installed software are synced over
+        the connection too — see the System tab for both side by side.
       </p>
     </motion.div>
   );

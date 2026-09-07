@@ -52,6 +52,48 @@
   --glass-shadow: 0 20px 60px -20px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.04) inset;
 }
 
+/* ---- Theme variants (Settings > Appearance). Default (no attribute, or
+   data-theme="violet") is the original palette above — the blocks below
+   only override the handful of tokens that actually change hue; layout,
+   type, and glass tokens are shared by every theme. ---- */
+[data-theme='midnight'] {
+  --base-950: #05080f; --base-900: #070c14; --surface-800: #0b1220; --surface-700: #101a2e;
+  --surface-600: #16223b; --surface-500: #1d2d4a; --border-subtle: #1c2942; --border-strong: #2f4468cc;
+  --accent-500: #3d8bfd; --accent-400: #5fa1ff; --accent-300: #9cc4ff; --accent-rgb: 61, 139, 253; --accent-glow: rgba(61,139,253,0.35);
+}
+[data-theme='emerald'] {
+  --base-950: #050f0a; --base-900: #08120e; --surface-800: #0c1913; --surface-700: #12211a;
+  --surface-600: #172c22; --surface-500: #1e392c; --border-subtle: #1b3324; --border-strong: #2f5a41cc;
+  --accent-500: #2fd680; --accent-400: #55e39a; --accent-300: #94f0c0; --accent-rgb: 47, 214, 128; --accent-glow: rgba(47,214,128,0.35);
+}
+[data-theme='sunset'] {
+  --base-950: #0e0906; --base-900: #140d08; --surface-800: #1c130c; --surface-700: #241a10;
+  --surface-600: #302215; --surface-500: #402d1a; --border-subtle: #2e2113; --border-strong: #55401fcc;
+  --accent-500: #f5a623; --accent-400: #ffbf52; --accent-300: #ffd688; --accent-rgb: 245, 166, 35; --accent-glow: rgba(245,166,35,0.35);
+}
+[data-theme='graphite'] {
+  --base-950: #0a0a0b; --base-900: #0c0c0e; --surface-800: #131315; --surface-700: #1a1a1d;
+  --surface-600: #222226; --surface-500: #2c2c31; --border-subtle: #232327; --border-strong: #3a3a40cc;
+  --accent-500: #9aa1b0; --accent-400: #b3b9c5; --accent-300: #ccd0d9; --accent-rgb: 154, 161, 176; --accent-glow: rgba(154,161,176,0.3);
+}
+[data-theme='light'] {
+  --base-950: #eef0f4; --base-900: #f4f5f8; --surface-800: #ffffff; --surface-700: #ffffff;
+  --surface-600: #eceef3; --surface-500: #e2e5ed; --border-subtle: #dde1ea; --border-strong: #c4cadb;
+  --text-primary: #1b2030; --text-muted: #5a6178; --text-faint: #8b93a7;
+  --accent-500: #5b3df0; --accent-400: #7458ff; --accent-300: #9c8dff; --accent-rgb: 91, 61, 240; --accent-glow: rgba(91,61,240,0.25);
+  --glass-bg: linear-gradient(180deg, rgba(20,20,30,0.035), rgba(20,20,30,0.01));
+  --glass-border: rgba(20,20,30,0.08);
+  --glass-shadow: 0 20px 60px -24px rgba(30,30,50,0.25), 0 1px 0 rgba(255,255,255,0.6) inset;
+}
+
+/* ---- Reduce motion (Settings > Appearance toggle) — same effect as the OS
+   prefers-reduced-motion media query below, applied manually regardless of
+   OS setting. ---- */
+.reduce-motion, .reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  transition-duration: 0.001ms !important;
+}
+
 * { box-sizing: border-box; }
 
 html, body, #root {

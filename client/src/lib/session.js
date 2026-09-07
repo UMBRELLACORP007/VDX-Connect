@@ -11,6 +11,9 @@ import io from 'socket.io-client';
 import SimplePeer from 'simple-peer';
 import { ipc } from './ipc';
 import { getConfig } from './auth';
+import { settings } from './settingsStore';
+
+const SYSINFO_PUSH_MS = 4000;
 
 const CONTROL_PREFIX = '__vdx-control__:';
 const FILE_CHUNK_MARKER = 0xf1;
@@ -53,8 +56,8 @@ export function createSession({ token, deviceId }) {
   ];
   let localScreenStream = null;
   let latencyTimer = null;
-  let selectedQualityMode = 'auto';
-  let activePresetName = 'medium';
+  let selectedQualityMode = settings.getDefaultQuality();
+  let activePresetName = selectedQualityMode === 'auto' ? 'medium' : selectedQualityMode;
   let remoteScreenSize = null;
 
   function log(msg) {
@@ -183,6 +186,17 @@ export function createSession({ token, deviceId }) {
         break;
       case 'file-resumed':
         bus.emit('transfer:peer-resumed', msg);
+        break;
+
+      // ---- System tab: live peer system info / installed software ----
+      case 'sysinfo':
+        bus.emit('peer:sysinfo', { info: msg.info, gpu: msg.gpu, at: Date.now() });
+        break;
+      case 'software-request':
+        sendOwnSoftware();
+        break;
+      case 'software':
+        bus.emit('peer:software', { apps: msg.apps || [], error: msg.error || null });
         break;
 
       // We're the side being controlled — inject via IPC into main.js,
@@ -337,7 +351,10 @@ export function createSession({ token, deviceId }) {
       bus.emit('transfer:batch-resolved', { batchId });
       return;
     }
-    const destRoot = await ipc.chooseSaveDir(b.label);
+    // Settings > File Transfer > "Default save folder" — if the user has
+    // set one, skip the per-transfer folder picker entirely.
+    const savedDefault = settings.getDefaultSaveDir();
+    const destRoot = savedDefault || await ipc.chooseSaveDir(b.label);
     if (!destRoot) return respondToIncomingBatch(batchId, false); // backing out of the folder picker == decline
     b.status = 'accepted';
     b.destRoot = destRoot;
@@ -458,6 +475,7 @@ export function createSession({ token, deviceId }) {
       bus.emit('session:connected');
       logConnectionType();
       startLatencyPing();
+      startSysInfoSync();
     });
 
     peer.on('stream', (stream) => {
@@ -475,6 +493,9 @@ export function createSession({ token, deviceId }) {
       cancelAllTransfers('Connection closed');
       stopLatencyPing();
       stopFpsReporting();
+      stopSysInfoSync();
+      bus.emit('peer:sysinfo', null);
+      bus.emit('peer:software', null);
       bus.emit('session:closed');
     });
   }
@@ -499,6 +520,7 @@ export function createSession({ token, deviceId }) {
     if (peer) { peer.destroy(); peer = null; }
     stopLatencyPing();
     stopFpsReporting();
+    stopSysInfoSync();
     bus.emit('remote-stream:cleared');
   }
 
@@ -511,14 +533,18 @@ export function createSession({ token, deviceId }) {
       const chosen = sources.find((s) => s.id === sourceId) || sources[0];
       const preset = QUALITY_PRESETS[selectedQualityMode === 'auto' ? 'medium' : selectedQualityMode];
 
+      // Settings > Audio > "Include system audio when sharing" — off means
+      // don't even attempt the combined capture.
+      const wantAudio = settings.getIncludeSystemAudio();
       let stream;
       try {
+        if (!wantAudio) throw new Error('audio disabled in settings');
         stream = await navigator.mediaDevices.getUserMedia({
           audio: { mandatory: { chromeMediaSource: 'desktop' } },
           video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: chosen.id, maxWidth: preset.maxWidth, maxHeight: preset.maxHeight, maxFrameRate: preset.maxFrameRate } },
         });
       } catch (e) {
-        log(`Combined video+audio capture failed (${e.message}) — retrying video only.`);
+        if (wantAudio) log(`Combined video+audio capture failed (${e.message}) — retrying video only.`);
         stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: chosen.id, maxWidth: preset.maxWidth, maxHeight: preset.maxHeight, maxFrameRate: preset.maxFrameRate } },
@@ -591,6 +617,48 @@ export function createSession({ token, deviceId }) {
     } catch (e) { log(`Could not set encoder bitrate: ${e.message}`); }
   }
 
+  // ---- System tab: live peer system info / installed software ----
+  // Piggybacks on the same CONTROL_PREFIX DataChannel protocol as
+  // everything else here — only flows once a session is actually
+  // connected (peer.connected), same restriction as sendControl itself.
+  // Pushed periodically rather than once because CPU/RAM numbers are only
+  // useful live; installed software is fetched once per session (it
+  // doesn't change mid-session) and re-fetchable on demand.
+  let sysInfoTimer = null;
+
+  async function sendOwnSysInfo() {
+    try {
+      const [info, gpu] = await Promise.all([ipc.getSystemInfo(), ipc.getGpuInfo()]);
+      sendControl('sysinfo', { info, gpu });
+    } catch (e) {
+      log(`Could not gather system info to send: ${e.message}`);
+    }
+  }
+
+  async function sendOwnSoftware() {
+    try {
+      const result = await ipc.getInstalledSoftware();
+      sendControl('software', result);
+    } catch (e) {
+      sendControl('software', { apps: [], error: e.message });
+    }
+  }
+
+  function requestPeerSoftware() {
+    sendControl('software-request');
+  }
+
+  function startSysInfoSync() {
+    stopSysInfoSync();
+    sendOwnSysInfo();
+    requestPeerSoftware(); // ask once up-front; peer's install list doesn't change mid-session
+    sysInfoTimer = setInterval(sendOwnSysInfo, SYSINFO_PUSH_MS);
+  }
+  function stopSysInfoSync() {
+    if (sysInfoTimer) clearInterval(sysInfoTimer);
+    sysInfoTimer = null;
+  }
+
   // ---- Latency ping (runs once DataChannel is connected) ----
   function startLatencyPing() {
     stopLatencyPing();
@@ -624,7 +692,14 @@ export function createSession({ token, deviceId }) {
     socket.on('connect', () => { log('Socket connected, authenticated.'); bus.emit('socket:connected'); loadChatHistory(); });
     socket.on('connect_error', (err) => { log(`Socket connect_error: ${err.message}`); bus.emit('socket:error', err.message); });
 
-    socket.on('peer:online', ({ deviceId: id }) => { otherDeviceId = id; bus.emit('peer:online', id); });
+    socket.on('peer:online', ({ deviceId: id }) => {
+      otherDeviceId = id;
+      bus.emit('peer:online', id);
+      // Settings > Connection > "Auto-connect when peer comes online" —
+      // skips the manual Connect button the instant both devices are on
+      // the signaling socket at once.
+      if (settings.getAutoConnect()) requestConnection();
+    });
     socket.on('peer:offline', ({ deviceId: id }) => { bus.emit('peer:offline', id); teardownPeerConnection(); });
 
     socket.on('connect:incoming', ({ fromDeviceId }) => { pendingIncomingFrom = fromDeviceId; bus.emit('connect:incoming', fromDeviceId); });
@@ -701,5 +776,6 @@ export function createSession({ token, deviceId }) {
     cancelIncomingTransfer,
     requestScreenshot,
     fetchActivityLog,
+    requestPeerSoftware,
   };
 }

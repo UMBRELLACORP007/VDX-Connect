@@ -33,8 +33,10 @@ export function LoginGate({ children }) {
     );
   }
 
-  // authenticated
-  return children(auth.session);
+  // authenticated — hand the whole auth object down (not just .session) so
+  // a "Log Out" control deeper in the tree (Settings > Security) can call
+  // auth.logout() without a second, parallel auth wiring path.
+  return children(auth);
 }
 
 function LoginForm({ auth }) {

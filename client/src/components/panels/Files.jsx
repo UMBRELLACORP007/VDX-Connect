@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { PanelShell } from './PanelShell';
 import { useConnection } from '../../state/ConnectionContext';
 import { ipc } from '../../lib/ipc';
+import { CONNECTED_DEVICE_LABEL } from '../../lib/labels';
 import './Files.css';
 
 function fmtBytes(n) {
@@ -41,7 +42,7 @@ export default function Files() {
   const batchList = Object.entries(incomingBatches);
 
   return (
-    <PanelShell title="Files" subtitle={peerDeviceId ? `Send to / receive from ${peerDeviceId}` : 'Connect to a peer to send files.'}>
+    <PanelShell title="Files" subtitle={peerDeviceId ? `Send to / receive from ${CONNECTED_DEVICE_LABEL}` : 'Connect to a peer to send files.'}>
       <div className="files-split">
         <motion.div
           className={`files-side glass-panel ${dragOver ? 'is-dragover' : ''}`}
@@ -58,7 +59,7 @@ export default function Files() {
         <div className="files-flow"><FlowArrow /></div>
 
         <div className="files-side glass-panel">
-          <span className="files-side-label">{peerDeviceId || 'Peer Device'}</span>
+          <span className="files-side-label">{peerDeviceId ? CONNECTED_DEVICE_LABEL : 'Peer Device'}</span>
           <div className="files-dropzone files-dropzone--muted">Incoming files appear below</div>
         </div>
       </div>
