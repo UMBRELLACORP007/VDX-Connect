@@ -7,6 +7,20 @@
   background: var(--base-950);
 }
 
+/* Set on <body> by Remote.jsx while a screen-share session is active
+   (sharing OR viewing) so the decorative background stops competing with
+   WebRTC video decode/composite for GPU time. blur(90px) on 3 animated
+   layers plus 24 animated particles is expensive even when "just CSS" —
+   on a low-end/integrated GPU this was enough on its own to drop control
+   FPS to 0-2 once the remote video's own compositing kicked in on top of
+   it. Fully removing the layer (not just pausing the animation) is what
+   actually frees the GPU budget, not merely slowing it down. */
+body.vdx-perf-mode .ambient-blob,
+body.vdx-perf-mode .ambient-particles,
+body.vdx-perf-mode .ambient-grid {
+  display: none;
+}
+
 .ambient-grid {
   position: absolute;
   inset: -10%;
@@ -27,7 +41,13 @@
 .ambient-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
+  /* Was blur(90px) — one of the most expensive filters a browser can run,
+     applied continuously to 3 large animated layers. Cut to 40px, which
+     still reads as a soft glow but is roughly 5x cheaper to composite
+     (blur cost scales with radius^2). Combined with vdx-perf-mode above
+     (which removes it entirely during an active session), this is the
+     main fix for the low-end-device slowdown. */
+  filter: blur(40px);
   opacity: 0.35;
   will-change: transform;
 }

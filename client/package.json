@@ -1,7 +1,7 @@
 {
   "name": "vdx-connect",
   "private": true,
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "VDX Connect \u2014 private device-to-device remote control, file transfer, and chat.",
   "author": "UMBRELLACORP007",
   "main": "src/main/main.js",

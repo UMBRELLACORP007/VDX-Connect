@@ -53,6 +53,18 @@ export default function Remote() {
     if (localVideoRef.current) localVideoRef.current.srcObject = localStream || null;
   }, [localStream]);
 
+  // Drop the decorative ambient background (see AmbientBackground.css)
+  // whenever a screen-share session is actually live — sharing or
+  // viewing, not just "connected". That's when GPU budget matters and
+  // when the always-on blurred layers were competing with video
+  // decode/composite. Removed again on unmount/session-end so the rest of
+  // the app keeps its normal look.
+  useEffect(() => {
+    const active = sharing || !!remoteStream;
+    document.body.classList.toggle('vdx-perf-mode', active);
+    return () => document.body.classList.remove('vdx-perf-mode');
+  }, [sharing, remoteStream]);
+
   // Real FPS measurement (viewer side) — uses the standard
   // getVideoPlaybackQuality API to count frames actually rendered over a
   // 1s window, then reports it back to the sharer via reportMeasuredFps
@@ -92,7 +104,9 @@ export default function Remote() {
           </div>
         ) : remoteStream ? (
           <>
-            <video ref={remoteVideoRef} className={`remote-video ${engaged ? 'is-engaged' : ''}`} autoPlay playsInline />
+            <div className={`remote-video-wrap ${engaged ? 'is-engaged' : ''}`}>
+              <video ref={remoteVideoRef} className={`remote-video ${engaged ? 'is-engaged' : ''}`} autoPlay playsInline />
+            </div>
             {!engaged && (
               <div className="remote-engage-hint">Click the screen to take control · Esc to release</div>
             )}

@@ -19,6 +19,15 @@ const CONTROL_PREFIX = '__vdx-control__:';
 const FILE_CHUNK_MARKER = 0xf1;
 const CHUNK_SIZE = 64 * 1024;
 const BUFFERED_AMOUNT_HIGH_WATER = 8 * 1024 * 1024; // pause sending past this
+// The installed-software list was being sent as ONE JSON control message.
+// On a machine with a lot of installed programs that string can run past
+// what's safe to hand to a single DataChannel send() — some
+// implementations throw, some just silently drop it. Either way the send
+// was wrapped in a try/catch that only logged internally, so this failed
+// completely invisibly: the request went out, nothing came back, panel
+// just stayed empty forever. Splitting into small text chunks (like file
+// transfer already does for binary) avoids the size cliff entirely.
+const SOFTWARE_CHUNK_SIZE = 48 * 1024;
 
 export const QUALITY_PRESETS = {
   high:   { label: '1080p / 20fps', maxWidth: 1920, maxHeight: 1080, maxFrameRate: 20, maxBitrate: 4_000_000 },
@@ -65,15 +74,34 @@ export function createSession({ token, deviceId }) {
   }
 
   // ---- ICE servers (Twilio TURN token from our own server) ----
+  // This fetch used to have no timeout, and connect() used to `await` it
+  // before even creating the socket.io connection. If the signaling
+  // server was cold (e.g. Railway free-tier spin-up) or Twilio was slow,
+  // the whole app would just sit there for a long time before attempting
+  // to connect at all — which looked like "connecting takes forever" and
+  // pushed people to restart the app (the second attempt would then hit a
+  // now-warm server and work). Two changes: (1) a hard 5s timeout so a
+  // slow TURN fetch can never block startup for more than that, and (2)
+  // connect() below no longer waits for this — it opens the socket
+  // immediately with STUN-only defaults and swaps in TURN servers
+  // whenever/if this resolves.
   async function refreshIceServers() {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
     try {
-      const res = await fetch(`${config.serverUrl}/turn/token`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${config.serverUrl}/turn/token`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      });
       if (!res.ok) throw new Error(`TURN token fetch failed (${res.status})`);
       const { iceServers: twilioIceServers } = await res.json();
       iceServers = [...iceServers, ...twilioIceServers];
       log(`Fetched ${twilioIceServers.length} TURN/STUN entries.`);
     } catch (e) {
-      log(`Could not fetch TURN credentials: ${e.message}. STUN-only fallback.`);
+      const reason = e.name === 'AbortError' ? 'timed out after 5s' : e.message;
+      log(`Could not fetch TURN credentials: ${reason}. STUN-only fallback.`);
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
@@ -195,8 +223,8 @@ export function createSession({ token, deviceId }) {
       case 'software-request':
         sendOwnSoftware();
         break;
-      case 'software':
-        bus.emit('peer:software', { apps: msg.apps || [], error: msg.error || null });
+      case 'software-chunk':
+        handleIncomingSoftwareChunk(msg);
         break;
 
       // We're the side being controlled — inject via IPC into main.js,
@@ -636,12 +664,52 @@ export function createSession({ token, deviceId }) {
   }
 
   async function sendOwnSoftware() {
+    let result;
     try {
-      const result = await ipc.getInstalledSoftware();
-      sendControl('software', result);
+      result = await ipc.getInstalledSoftware();
     } catch (e) {
-      sendControl('software', { apps: [], error: e.message });
+      result = { apps: [], error: e.message };
     }
+    sendSoftwareChunked(result);
+  }
+
+  // Splits the (potentially large) apps list into several small control
+  // messages instead of one big one. Each chunk carries an id (so
+  // concurrent/overlapping requests can't interleave), an index, the total
+  // chunk count, and a slice of the JSON-stringified payload; the receiver
+  // (handleIncomingSoftwareChunk) reassembles and JSON.parses once the
+  // last chunk arrives. See SOFTWARE_CHUNK_SIZE comment above for why this
+  // exists.
+  function sendSoftwareChunked(result) {
+    const json = JSON.stringify(result);
+    const chunkId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const total = Math.max(1, Math.ceil(json.length / SOFTWARE_CHUNK_SIZE));
+    for (let i = 0; i < total; i++) {
+      sendControl('software-chunk', {
+        chunkId,
+        index: i,
+        total,
+        data: json.slice(i * SOFTWARE_CHUNK_SIZE, (i + 1) * SOFTWARE_CHUNK_SIZE),
+      });
+    }
+  }
+
+  let incomingSoftware = null; // { chunkId, parts: string[], total }
+  function handleIncomingSoftwareChunk(msg) {
+    if (!incomingSoftware || incomingSoftware.chunkId !== msg.chunkId) {
+      incomingSoftware = { chunkId: msg.chunkId, parts: new Array(msg.total), total: msg.total, received: 0 };
+    }
+    if (incomingSoftware.parts[msg.index] === undefined) incomingSoftware.received++;
+    incomingSoftware.parts[msg.index] = msg.data;
+    if (incomingSoftware.received < incomingSoftware.total) return;
+
+    try {
+      const result = JSON.parse(incomingSoftware.parts.join(''));
+      bus.emit('peer:software', { apps: result.apps || [], error: result.error || null });
+    } catch (e) {
+      bus.emit('peer:software', { apps: [], error: `Could not parse peer software list: ${e.message}` });
+    }
+    incomingSoftware = null;
   }
 
   function requestPeerSoftware() {
@@ -686,7 +754,13 @@ export function createSession({ token, deviceId }) {
 
   // ---- Socket / signaling ----
   async function connect() {
-    await refreshIceServers();
+    // No longer `await`ed — don't let a slow/cold TURN fetch delay the
+    // socket connection itself. iceServers starts with STUN defaults
+    // (see declaration above) and gets TURN entries appended whenever
+    // this resolves, which is fine even if it lands after the peer
+    // connection has already started — simple-peer/RTCPeerConnection just
+    // won't have TURN candidates to try until then.
+    refreshIceServers();
     socket = io(config.serverUrl, { auth: { token } });
 
     socket.on('connect', () => { log('Socket connected, authenticated.'); bus.emit('socket:connected'); loadChatHistory(); });

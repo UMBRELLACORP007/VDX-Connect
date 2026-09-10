@@ -68,19 +68,38 @@
   transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out);
 }
 
+/* border-radius + box-shadow used to live directly on the <video>. On a
+   low-end/integrated GPU, rounding the corners of a live video element
+   forces Chromium off its fast direct video-compositing path onto a
+   slower one — and that cost was being paid on every single frame, not
+   just once. Moved both onto this wrapper (a plain div, cheap to round)
+   with overflow:hidden doing the clipping instead, so the <video> itself
+   stays unrounded/unshadowed and keeps the fast path. This is the fix for
+   FPS dropping to 0-2 specifically when control is engaged. */
+.remote-video-wrap {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+}
+
+.remote-video-wrap.is-engaged {
+  box-shadow: 0 0 0 2px var(--accent-500) inset;
+}
+
 .remote-video {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
   background: #000;
-  border-radius: var(--radius-lg);
   outline: none;
   cursor: pointer;
 }
 
 .remote-video.is-engaged {
   cursor: none;
-  box-shadow: 0 0 0 2px var(--accent-500) inset;
 }
 
 .remote-engage-hint {

@@ -12,7 +12,12 @@ export default function AmbientBackground() {
       <div className="ambient-blob ambient-blob--b" />
       <div className="ambient-blob ambient-blob--c" />
       <div className="ambient-particles">
-        {Array.from({ length: 24 }).map((_, i) => (
+        {/* Was 24 — halved. Each one is a continuously-animating layer;
+            this is pure decoration and doesn't need to be dense to read
+            as "ambient". Combined with the CSS changes in
+            AmbientBackground.css this meaningfully cuts idle GPU load on
+            low-end devices. */}
+        {Array.from({ length: 12 }).map((_, i) => (
           <span key={i} className="ambient-particle" style={{
             left: `${(i * 37) % 100}%`,
             top: `${(i * 53) % 100}%`,
